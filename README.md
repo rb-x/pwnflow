@@ -13,18 +13,17 @@ Are you:
   ...while keeping sensitive data private?
     
 Well, penflow helps you:
-- 📊 Track and visualize your penetration testing progress
-- 📝 Document your methodology step by step
-- 🔄 Share attack paths with your team
-- 🎨 Create clear, visual maps of your security testing approach
-- 📈 Structure and organize your analysis workflow
-- 🔍 Follow a clear and intuitive investigation process
+- 📈 Track and visualize your penetration testing progress
+- 🗂️ Document your methodology step by step
+- 📋 Templatize your CLI commands
+- 👥 Share attack paths with your team
+- 🗺️ Create clear, visual maps of your security testing approach
+- 🗂️ Structure and organize your analysis workflow
+- 🔎 Follow a clear and intuitive investigation process
 
 Perfect for pentesters, security analysts, incident responders, and any security professional looking to streamline their methodology.
 
-![scr-001](https://github.com/user-attachments/assets/74eee503-81d1-4a8d-98c7-934a142cf174)
-![scr-002](https://github.com/user-attachments/assets/7ed4e48f-554e-4d53-bba9-f0133ebda004)
-![scr-003](https://github.com/user-attachments/assets/d391d92c-8154-4834-87ed-1e5dfa93844f)
+![demo_video](./assets/demo_video.gif)
 
 ## Features ✨
 
@@ -32,7 +31,10 @@ Perfect for pentesters, security analysts, incident responders, and any security
 - 🔒 **Privacy-First**: No server needed, works offline 
 - 💾 **Local Storage**: Your data stays on your device
 - 🔐 **Encrypted Exports**: AES-256-GCM encryption for secure data sharing
-- 🤝 **Team-Friendly**: Easy sharing while maintaining privacy
+- 📈 **Progress Tracking**: Visualize your progress and share with your team
+- 📚 **GitHub import**: Import your templates from GitHub repository
+- 🔗 **Git(lab|hub) private import**: Import your templates from a private repository (community version)
+- 📚 **CSV export**: CSV export of your sessions and commands (community version)
 
 ## Documentation 📚
 
@@ -46,11 +48,13 @@ Visit our [documentation](https://docs.penflow.sh) to learn more about Penflow's
 Visit [map.penflow.sh](https://map.penflow.sh) to start using Penflow immediately.
 
 ### Option 2: Self-Host it
-Download the latest release from our [releases page](https://github.com/rb-x/penflow/releases).
+Download the latest build release from our [releases page](https://github.com/rb-x/penflow/releases).
+
 
 > 🔨 **Development Status**: 
+
 > - Application is under active development
-> - React source code will be released once we reach our stability milestone
+> - React source code will be released if we reach our stability and user base milestones
 
 ## [Contributing 🤝](https://docs.penflow.sh/docs/contrib/support)
 
@@ -59,7 +63,10 @@ Download the latest release from our [releases page](https://github.com/rb-x/pen
 - Have a feature request? [Share your idea](https://github.com/rb-x/penflow/issues)
 
 ### 🎯 Community Hub
-> Start using Penflow while we build something bigger! A platform for sharing methodologies with the security community is coming soon. Stay tuned! 👀
+
+A community repository for sharing templates is in development :
+
+[Penflow Templates](https://github.com/rb-x/penflow-templates)
 
 ---
 
