@@ -1,0 +1,28 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+websockets = "*"
+python-dotenv = "*"
+pydantic-settings = "*"
+neo4j = "*"
+passlib = {extras = ["bcrypt"], version = "*"}
+python-jose = "*"
+pydantic = {extras = ["email"], version = "*"}
+httpx = "*"
+python-multipart = "*"
+redis = {extras = ["hiredis"], version = ">=4.2.0"}
+google-generativeai = "*"
+cryptography = "*"
+
+[dev-packages]
+pytest = "*"
+httpx = "*"
+pytest-asyncio = "*"
+
+[requires]
+python_version = "3.12"

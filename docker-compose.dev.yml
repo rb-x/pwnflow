@@ -1,0 +1,120 @@
+services:
+  # Neo4j Database
+  neo4j:
+    image: neo4j:latest
+    container_name: penflow-neo4j-dev
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    volumes:
+      - $PWD/neo4j-data-dev:/data
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/password}
+      - NEO4J_PLUGINS=["apoc"]
+      # Note: Neo4j Community Edition doesn't support multiple databases
+      # The default database is always 'neo4j'
+    restart: unless-stopped
+    networks:
+      - penflow-dev-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: penflow-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-dev:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    networks:
+      - penflow-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis UI
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: penflow-redis-commander-dev
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - penflow-dev-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: penflow-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/.venv # Exclude virtual environment
+    env_file:
+      - .env.development # Use development env file
+    environment:
+      # Override database connections for Docker networking
+      - NEO4J_URI=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379
+      # Python settings
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - WATCHFILES_FORCE_POLLING=true # For hot reload in Docker
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - penflow-dev-network
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: penflow-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Exclude node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - CHOKIDAR_USEPOLLING=true # For hot reload in Docker
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - penflow-dev-network
+    command: pnpm dev --host 0.0.0.0
+
+networks:
+  penflow-dev-network:
+    driver: bridge
+
+volumes:
+  neo4j-data-dev:
+  redis-data-dev:

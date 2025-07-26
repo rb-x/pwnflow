@@ -1,0 +1,114 @@
+services:
+  # Neo4j Database
+  neo4j:
+    image: neo4j:latest
+    container_name: penflow-neo4j-prod
+    # Remove external ports - only accessible within network
+    volumes:
+      - $PWD/neo4j-data-prod:/data
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/password}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    restart: unless-stopped
+    networks:
+      - penflow-prod-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: penflow-redis-prod
+    volumes:
+      - redis-data-prod:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    networks:
+      - penflow-prod-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: penflow-backend-prod
+    env_file:
+      - ./.env.production
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - penflow-prod-network
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Nginx with Frontend
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+      args:
+        - VITE_API_BASE_URL=${FRONTEND_API_URL:-/api/v1}
+        - VITE_APP_ENV=${APP_ENV:-production}
+        - VITE_ENABLE_ANALYTICS=${ENABLE_ANALYTICS:-true}
+    container_name: penflow-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443" # For HTTPS in production
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - penflow-prod-network
+    volumes:
+      # For Let's Encrypt certificates
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  penflow-prod-network:
+    driver: bridge
+
+volumes:
+  neo4j-data-prod:
+  redis-data-prod:

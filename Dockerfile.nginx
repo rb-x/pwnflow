@@ -1,0 +1,40 @@
+# Build stage for frontend
+FROM node:20-alpine AS frontend-builder
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copy frontend files
+COPY ./frontend/package.json ./frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY ./frontend .
+
+# Build the frontend with build-time args
+ARG VITE_API_BASE_URL=/api/v1
+ARG VITE_APP_ENV=production
+ARG VITE_ENABLE_ANALYTICS=true
+
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_APP_ENV=$VITE_APP_ENV
+ENV VITE_ENABLE_ANALYTICS=$VITE_ENABLE_ANALYTICS
+
+RUN pnpm build
+
+# Production stage - Nginx
+FROM nginx:alpine
+
+# Copy frontend build
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+
+# Copy nginx config
+COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Remove default nginx config
+RUN rm -f /etc/nginx/sites-enabled/default
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]

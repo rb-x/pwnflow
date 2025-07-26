@@ -1,0 +1,33 @@
+penflow-priv/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.ropeproject/
+
+# Environment files - NEVER COMMIT!
+.env
+.env.local
+.env.development
+.env.production
+backend/.env
+backend/.env.production
+frontend/.env
+frontend/.env.production
+**/secrets/
+*.pem
+*.key
+*.crt
+
+# Docker volumes
+neo4j-data-*/
+redis-data-*/

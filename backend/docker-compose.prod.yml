@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j-data:/data
+    environment:
+      - NEO4J_AUTH=neo4j/password  # Change in production
+    restart: unless-stopped
+    networks:
+      - penflow-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: penflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    networks:
+      - penflow-network
+
+  backend:
+    build: .
+    container_name: penflow-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+      - NEO4J_DATABASE=penflowdb
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - neo4j
+      - redis
+    restart: unless-stopped
+    networks:
+      - penflow-network
+
+networks:
+  penflow-network:
+    driver: bridge
+
+volumes:
+  neo4j-data:
+  redis-data:

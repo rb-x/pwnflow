@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY Pipfile ./
+RUN pip install --upgrade pip && \
+    pip install pipenv && \
+    pipenv install --system --skip-lock
+
+# Copy application code
+COPY . .
+
+EXPOSE 8000
+
+# Use uvicorn for production
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

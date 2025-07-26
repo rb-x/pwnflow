@@ -1,0 +1,402 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Edge styles */
+.react-flow__edge .react-flow__edge-path {
+  stroke: #b1b1b167 !important;
+  stroke-width: 2 !important;
+  transition: stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out, filter 0.2s ease-in-out !important;
+}
+
+/* Edge hover effect - target the parent edge element */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #3b82f6 !important;  /* Blue color to indicate interactivity */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.6)) !important;  /* Glow effect */
+}
+
+/* Dark mode edge hover */
+.dark .react-flow__edge:hover .react-flow__edge-path {
+  stroke: #60a5fa !important;  /* Lighter blue for dark mode */
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.8)) !important;
+}
+
+/* Edge interaction area */
+.react-flow__edge .react-flow__edge-interaction {
+  stroke: transparent !important;
+  stroke-width: 20 !important;
+  cursor: pointer !important;
+}
+
+/* Selected edge style */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #ef4444 !important;  /* Red for selected/active edge */
+  stroke-width: 3 !important;
+}
+
+/* Focused edge style - edges connected to focused node */
+.react-flow__edge.focused-edge .react-flow__edge-path {
+  stroke: #ef4444 !important;  /* Red for edges connected to focused node */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6)) !important;
+  animation: pulse-edge 2s ease-in-out infinite;
+}
+
+/* Dark mode focused edge */
+.dark .react-flow__edge.focused-edge .react-flow__edge-path {
+  stroke: #f87171 !important;  /* Lighter red for dark mode */
+  filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.8)) !important;
+}
+
+/* Pulse animation for focused edges */
+@keyframes pulse-edge {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Status Trail edge styles */
+.react-flow__edge.status-trail-not_started .react-flow__edge-path {
+  stroke: #3b82f6 !important;  /* Blue for Not Started */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6)) !important;
+  animation: pulse-edge 2s ease-in-out infinite;
+}
+
+.react-flow__edge.status-trail-in_progress .react-flow__edge-path {
+  stroke: #eab308 !important;  /* Yellow for In Progress */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.6)) !important;
+  animation: pulse-edge 2s ease-in-out infinite;
+}
+
+.react-flow__edge.status-trail-success .react-flow__edge-path {
+  stroke: #10b981 !important;  /* Green for Success */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.6)) !important;
+  animation: pulse-edge 2s ease-in-out infinite;
+}
+
+.react-flow__edge.status-trail-failed .react-flow__edge-path {
+  stroke: #ef4444 !important;  /* Red for Failed */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6)) !important;
+  animation: pulse-edge 2s ease-in-out infinite;
+}
+
+.react-flow__edge.status-trail-not_applicable .react-flow__edge-path {
+  stroke: #6b7280 !important;  /* Gray for Not Applicable */
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(107, 114, 128, 0.6)) !important;
+  animation: pulse-edge 2s ease-in-out infinite;
+}
+
+/* Dark mode status trail colors */
+.dark .react-flow__edge.status-trail-not_started .react-flow__edge-path {
+  stroke: #60a5fa !important;  /* Lighter blue for dark mode */
+  filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.8)) !important;
+}
+
+.dark .react-flow__edge.status-trail-in_progress .react-flow__edge-path {
+  stroke: #fbbf24 !important;  /* Lighter yellow for dark mode */
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)) !important;
+}
+
+.dark .react-flow__edge.status-trail-success .react-flow__edge-path {
+  stroke: #34d399 !important;  /* Lighter green for dark mode */
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.8)) !important;
+}
+
+.dark .react-flow__edge.status-trail-failed .react-flow__edge-path {
+  stroke: #f87171 !important;  /* Lighter red for dark mode */
+  filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.8)) !important;
+}
+
+.dark .react-flow__edge.status-trail-not_applicable .react-flow__edge-path {
+  stroke: #9ca3af !important;  /* Lighter gray for dark mode */
+  filter: drop-shadow(0 0 6px rgba(156, 163, 175, 0.8)) !important;
+}
+
+/* Handle styles */
+.react-flow__handle {
+  background: #a1a1aa !important;
+  border: 1px solid #71717a !important;
+  width: 4px !important;
+  height: 4px !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.react-flow__handle:hover {
+  background: #3b82f6 !important;  /* Blue on hover */
+  border-color: #3b82f6 !important;
+  width: 6px !important;
+  height: 6px !important;
+}
+
+/* Position handles completely outside of nodes */
+.react-flow__handle-top {
+  top: -15px !important;
+}
+
+.react-flow__handle-bottom {
+  bottom: -15px !important;
+}
+
+.react-flow__handle-left {
+  left: -15px !important;
+}
+
+.react-flow__handle-right {
+  right: -15px !important;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(0.9911 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9401 0 0);
+  --secondary-foreground: oklch(0 0 0);
+  --muted: oklch(0.9702 0 0);
+  --muted-foreground: oklch(0.4386 0 0);
+  --accent: oklch(0.9401 0 0);
+  --accent-foreground: oklch(0 0 0);
+  --destructive: oklch(0.629 0.1902 23.0704);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.9189 0 0);
+  --input: oklch(0.9401 0 0);
+  --ring: oklch(0 0 0);
+  --chart-1: oklch(0.6489 0.1494 142.3748);
+  --chart-2: oklch(0.5499 0.2197 264.4382);
+  --chart-3: oklch(0.7495 0.1495 45.0223);
+  --chart-4: oklch(0.6512 0.1999 299.9276);
+  --chart-5: oklch(0.7115 0.1309 178.0466);
+  --sidebar: oklch(0.2046 0 0);
+  --sidebar-foreground: oklch(0.9851 0 0);
+  --sidebar-primary: oklch(0.4386 0 0);
+  --sidebar-primary-foreground: oklch(0.9851 0 0);
+  --sidebar-accent: oklch(0.2686 0 0);
+  --sidebar-accent-foreground: oklch(0.9851 0 0);
+  --sidebar-border: oklch(0.2768 0 0);
+  --sidebar-ring: oklch(0.4386 0 0);
+  --font-sans: Geist, sans-serif;
+  --font-serif: Geist, sans-serif;
+  --font-mono: Geist Mono, monospace;
+  --radius: 0.65rem;
+  --shadow-2xs: 0 7px 6.5px 0px hsl(0 0% 0% / 0.01);
+  --shadow-xs: 0 7px 6.5px 0px hsl(0 0% 0% / 0.01);
+  --shadow-sm:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 1px 2px -1px hsl(0 0% 0% / 0.02);
+  --shadow:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 1px 2px -1px hsl(0 0% 0% / 0.02);
+  --shadow-md:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 2px 4px -1px hsl(0 0% 0% / 0.02);
+  --shadow-lg:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 4px 6px -1px hsl(0 0% 0% / 0.02);
+  --shadow-xl:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 8px 10px -1px hsl(0 0% 0% / 0.02);
+  --shadow-2xl: 0 7px 6.5px 0px hsl(0 0% 0% / 0.05);
+  --tracking-normal: 0em;
+  --spacing: 0.24rem;
+}
+
+.dark {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.1398 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.1822 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.252 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.2308 0 0);
+  --muted-foreground: oklch(0.7187 0 0);
+  --accent: oklch(0.3211 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.6897 0.1998 23.9818);
+  --destructive-foreground: oklch(0 0 0);
+  --border: oklch(0.2603 0 0);
+  --input: oklch(0.3211 0 0);
+  --ring: oklch(0.7187 0 0);
+  --chart-1: oklch(0.8088 0.1699 75.2344);
+  --chart-2: oklch(0.5811 0.21 260.8318);
+  --chart-3: oklch(0.559 0 0);
+  --chart-4: oklch(0.4386 0 0);
+  --chart-5: oklch(0.9189 0 0);
+  --sidebar: oklch(0.2046 0 0);
+  --sidebar-foreground: oklch(0.9851 0 0);
+  --sidebar-primary: oklch(0.4386 0 0);
+  --sidebar-primary-foreground: oklch(0.9851 0 0);
+  --sidebar-accent: oklch(0.2686 0 0);
+  --sidebar-accent-foreground: oklch(0.9851 0 0);
+  --sidebar-border: oklch(0.2768 0 0);
+  --sidebar-ring: oklch(0.4386 0 0);
+  --font-sans: Geist, sans-serif;
+  --font-serif: Geist, sans-serif;
+  --font-mono: Geist Mono, monospace;
+  --radius: 0.65rem;
+  --shadow-2xs: 0 7px 6.5px 0px hsl(0 0% 0% / 0.01);
+  --shadow-xs: 0 7px 6.5px 0px hsl(0 0% 0% / 0.01);
+  --shadow-sm:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 1px 2px -1px hsl(0 0% 0% / 0.02);
+  --shadow:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 1px 2px -1px hsl(0 0% 0% / 0.02);
+  --shadow-md:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 2px 4px -1px hsl(0 0% 0% / 0.02);
+  --shadow-lg:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 4px 6px -1px hsl(0 0% 0% / 0.02);
+  --shadow-xl:
+    0 7px 6.5px 0px hsl(0 0% 0% / 0.02), 0 8px 10px -1px hsl(0 0% 0% / 0.02);
+  --shadow-2xl: 0 7px 6.5px 0px hsl(0 0% 0% / 0.05);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+}
+
+body[data-scroll-locked] {
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+  position: relative !important;
+  padding-left: revert-layer !important;
+  padding-top: revert-layer !important;
+  padding-right: revert-layer !important;
+  margin-left: revert-layer !important;
+  margin-top: revert-layer !important;
+  margin-right: revert-layer !important;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
