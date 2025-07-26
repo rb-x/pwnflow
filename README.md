@@ -46,8 +46,8 @@ Penflow is a mind-mapping platform designed specifically for cybersecurity profe
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/rb-x/penflow-fullstack.git
-cd penflow-fullstack
+git clone https://github.com/rb-x/penflow.git
+cd penflow
 ```
 
 2. Make the run script executable:
@@ -115,7 +115,7 @@ python main.py    # Runs on http://localhost:8000
 ## 📁 Project Structure
 
 ```
-penflow-fullstack/
+penflow/
 ├── frontend/           # React TypeScript application
 │   ├── src/
 │   │   ├── components/ # UI components
@@ -200,4 +200,4 @@ Created with ❤️ in 🇫🇷 by [Riadh BOUCHAHOUA (rb-x)](https://github.com/
 
 **Join the Penflow community and revolutionize your security testing workflow!**
 
-[Website](https://penflow.sh) | [Documentation](https://docs.penflow.sh) | [Templates](https://github.com/rb-x/penflow-templates)
+[Website-legacy](https://penflow.sh) | [Documentation-legacy](https://docs.penflow.sh) | [Templates-legacy](https://github.com/rb-x/penflow-templates)
