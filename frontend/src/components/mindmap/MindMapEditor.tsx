@@ -1446,6 +1446,7 @@ export function MindMapEditor({
         data: {
           ...node,
           label: node.title,
+          projectId, // Add projectId to node data
         },
       }));
 
@@ -1538,6 +1539,7 @@ export function MindMapEditor({
               data: {
                 ...node,
                 label: node.title,
+                projectId, // Add projectId to node data
               },
             };
           });
@@ -1565,6 +1567,7 @@ export function MindMapEditor({
               data: {
                 ...apiNode,
                 label: apiNode.title,
+                projectId, // Add projectId to node data
               },
             };
           }
