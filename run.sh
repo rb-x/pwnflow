@@ -51,13 +51,19 @@ check_requirements() {
         exit 1
     fi
 
-    if ! command -v docker-compose &> /dev/null; then
+    if docker compose version &> /dev/null; then
+        DOCKER_COMPOSE="docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        DOCKER_COMPOSE="docker-compose"
+    else
         print_error "Docker Compose is not installed"
         exit 1
     fi
 }
 
 # Main logic
+check_requirements
+
 case "$1" in
     dev)
         print_info "Starting development environment..."
@@ -126,7 +132,7 @@ EOF
             export $(grep -E '^NEO4J_AUTH=' ./.env.development | xargs)
         fi
 
-        docker-compose -f docker-compose.dev.yml up --build
+        $DOCKER_COMPOSE -f docker-compose.dev.yml up --build
         ;;
 
     prod)
@@ -227,13 +233,13 @@ EOF
             export $(grep -E '^NEO4J_AUTH=' ./.env.production | xargs)
         fi
 
-        docker-compose -f docker-compose.prod.yml up --build
+        $DOCKER_COMPOSE -f docker-compose.prod.yml up --build
         ;;
 
     stop)
         print_info "Stopping all containers..."
-        docker-compose -f docker-compose.dev.yml down
-        docker-compose -f docker-compose.prod.yml down
+        $DOCKER_COMPOSE -f docker-compose.dev.yml down
+        $DOCKER_COMPOSE -f docker-compose.prod.yml down
         print_info "All containers stopped"
         ;;
 
@@ -243,8 +249,8 @@ EOF
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             print_info "Cleaning up..."
-            docker-compose -f docker-compose.dev.yml down -v
-            docker-compose -f docker-compose.prod.yml down -v
+            $DOCKER_COMPOSE -f docker-compose.dev.yml down -v
+            $DOCKER_COMPOSE -f docker-compose.prod.yml down -v
             print_info "Cleanup complete"
         else
             print_info "Cleanup cancelled"
