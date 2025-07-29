@@ -68,6 +68,7 @@ chmod +x run.sh
 This will automatically:
 - Check for Docker and Docker Compose
 - Create `.env.development` with secure defaults (Neo4j password: `password`)
+- To enable the AI feature, press CTRL+C. Then, add your [Gemini API Key](https://aistudio.google.com/apikey in your .env file & restart the application by running `./run.sh dev`
 - Start all services (Frontend, Backend, Neo4j, Redis)
 - Display service URLs
 
@@ -77,6 +78,8 @@ This will automatically:
 - API Documentation: http://localhost:8000/docs
 - Neo4j Browser: http://localhost:7474
 - Redis Commander: http://localhost:8081
+
+
 
 ### Other Commands
 
