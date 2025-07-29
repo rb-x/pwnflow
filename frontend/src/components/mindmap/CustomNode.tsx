@@ -23,6 +23,7 @@ import { MagicCard } from "@/components/ui/magic-card";
 import type { NodeData } from "@/types";
 import { useMindMapStore } from "@/store/mindMapStore";
 import { useTheme } from "@/components/theme-provider";
+import { useNodeCommands } from "@/hooks/api/useCommands";
 
 // Status icon mapping
 const statusIcons = {
@@ -36,6 +37,7 @@ const statusIcons = {
 
 interface CustomNodeData extends NodeData {
   label?: string;
+  projectId: string; // Add projectId to the interface
 }
 
 export const CustomNode = memo(
@@ -44,6 +46,9 @@ export const CustomNode = memo(
     const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
     const reactFlowInstance = useReactFlow();
     const layoutDirection = useMindMapStore((state) => state.layoutDirection);
+
+    // Get real-time command count
+    const { data: commands = [] } = useNodeCommands(data.projectId, id);
 
     // Check if this node is in focus mode
     const nodes = reactFlowInstance.getNodes();
@@ -151,7 +156,7 @@ export const CustomNode = memo(
     const hasFindings = data.findings && data.findings.trim().length > 0;
     const hasDescription =
       data.description && data.description.trim().length > 0;
-    const hasCommands = data.commands && data.commands.length > 0;
+    const hasCommands = commands && commands.length > 0; // Use live command data
     const hasContent = hasFindings || hasDescription || hasCommands;
 
     return (
@@ -210,7 +215,7 @@ export const CustomNode = memo(
                 )}
               >
                 <Terminal className="h-3 w-3" />
-                <span>{data.commands.length}</span>
+                <span>{commands.length}</span> {/* Use live command count */}
               </div>
             )}
           </div>

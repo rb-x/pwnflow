@@ -115,6 +115,17 @@ export function CommandDialog({
     }
   }, [command]);
 
+  // Reset form state when dialog opens
+  useEffect(() => {
+    if (isOpen && !command) {
+      // Only reset when opening for a new command (no existing command to edit)
+      setTitle("");
+      setCommandText("");
+      setDescription("");
+      setCursorPosition(0);
+    }
+  }, [isOpen, command]);
+
   const handleInsertVariable = (variable: string) => {
     if (!commandText) {
       setCommandText(variable);

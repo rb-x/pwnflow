@@ -119,7 +119,10 @@ export function NodeDetailsDrawer({
   const { setNodes } = useReactFlow();
 
   // Command hooks
-  const commands = node?.commands || [];
+  const { data: commands = [] } = useNodeCommands(
+    projectId,
+    selectedNodeId || ""
+  );
   const createCommand = useCreateCommand();
   const updateCommand = useUpdateCommand();
   const deleteCommand = useDeleteCommand();
@@ -409,6 +412,13 @@ export function NodeDetailsDrawer({
     2000 // Increased to 2 seconds for better UX
   );
 
+  // Reset command dialog state when selected node changes
+  useEffect(() => {
+    setShowCommandDialog(false);
+    setEditingCommand(undefined);
+    setExpandedCommands(new Set());
+  }, [selectedNodeId]);
+
   // Handle title save
   const handleTitleSave = async () => {
     if (!selectedNodeId) return;
@@ -582,6 +592,7 @@ export function NodeDetailsDrawer({
         },
       });
       setShowCommandDialog(false);
+      setEditingCommand(undefined); // Reset the editing command
     } catch (error) {
       // Error toast is handled by the hook
     }
@@ -635,8 +646,12 @@ export function NodeDetailsDrawer({
   };
 
   const handleAddCommand = () => {
+    // Ensure state is completely reset before opening dialog
     setEditingCommand(undefined);
-    setShowCommandDialog(true);
+    // Use setTimeout to ensure state update has processed
+    setTimeout(() => {
+      setShowCommandDialog(true);
+    }, 0);
   };
 
   // Toggle command expand/collapse
@@ -1397,10 +1412,15 @@ export function NodeDetailsDrawer({
       {/* Command Dialog */}
       {selectedNodeId && (
         <CommandDialog
+          key={editingCommand?.id || 'new-command'}
           isOpen={showCommandDialog}
           onClose={() => {
+            console.log("CommandDialog onClose called, resetting state");
+            // Reset all dialog-related state
             setShowCommandDialog(false);
             setEditingCommand(undefined);
+            // Also reset any expanded commands
+            setExpandedCommands(new Set());
           }}
           projectId={projectId}
           nodeId={selectedNodeId}
