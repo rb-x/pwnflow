@@ -21,10 +21,13 @@ import {
   Tag,
   Upload,
   ChevronDown,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { ProjectImportDialog } from "@/components/export/ProjectImportDialog";
 import {
   Dialog,
@@ -52,6 +55,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 
 export function DashboardPage() {
@@ -63,6 +67,8 @@ export function DashboardPage() {
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [projectTags, setProjectTags] = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templateSearchOpen, setTemplateSearchOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateTags, setTemplateTags] = useState<string[]>([]);
@@ -118,16 +124,18 @@ export function DashboardPage() {
       name: projectName,
       description: projectDescription || null,
       category_tags: uniqueTags.length > 0 ? uniqueTags : undefined,
+      source_template_id: selectedTemplateId || undefined,
     });
 
     setShowCreateProjectDialog(false);
     setProjectName("");
     setProjectDescription("");
     setProjectTags([]);
+    setSelectedTemplateId(null);
   };
 
   const handleCreateTemplate = async () => {
-    if (!templateName.trim()) return;
+    if (!templateName.trim() || !selectedProjectId) return;
 
     const uniqueTags = Array.from(
       new Set(templateTags.map((tag) => tag.toLowerCase()))
@@ -139,7 +147,7 @@ export function DashboardPage() {
       name: templateName,
       description: templateDescription || null,
       category_tags: uniqueTags,
-      source_project_id: selectedProjectId || null,
+      source_project_id: selectedProjectId,
     });
 
     setShowCreateTemplateDialog(false);
@@ -397,6 +405,8 @@ export function DashboardPage() {
             setProjectName("");
             setProjectDescription("");
             setProjectTags([]);
+            setSelectedTemplateId(null);
+            setTemplateSearchOpen(false);
           }
         }}
       >
@@ -428,6 +438,86 @@ export function DashboardPage() {
                 placeholder="Brief description of the project"
                 rows={3}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Create from Template (optional)</Label>
+              <Popover
+                open={templateSearchOpen}
+                onOpenChange={setTemplateSearchOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={templateSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedTemplateId ? (
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        {
+                          templates?.find((t) => t.id === selectedTemplateId)
+                            ?.name
+                        }
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {templates && templates.length > 0 
+                          ? "Select a template to start from..." 
+                          : "No templates available"}
+                      </span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search templates..." />
+                    <CommandList>
+                      <CommandEmpty>No template found.</CommandEmpty>
+                      <CommandGroup>
+                        {templates?.map((template) => (
+                          <CommandItem
+                            key={template.id}
+                            value={template.name}
+                            onSelect={() => {
+                              setSelectedTemplateId(
+                                selectedTemplateId === template.id
+                                  ? null
+                                  : template.id
+                              );
+                              setTemplateSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedTemplateId === template.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium">{template.name}</div>
+                              {template.description && (
+                                <div className="text-xs text-muted-foreground">
+                                  {template.description}
+                                </div>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {selectedTemplateId && (
+                <p className="text-xs text-muted-foreground">
+                  Your project will start with all nodes and configurations from
+                  this template.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Category Tags</Label>
@@ -473,7 +563,7 @@ export function DashboardPage() {
           <DialogHeader>
             <DialogTitle>Create New Template</DialogTitle>
             <DialogDescription>
-              Create a reusable template for future projects
+              Create a reusable template from an existing project
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -499,7 +589,7 @@ export function DashboardPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Create from Project (optional)</Label>
+              <Label>Source Project *</Label>
               <Popover
                 open={projectSearchOpen}
                 onOpenChange={setProjectSearchOpen}
@@ -520,7 +610,11 @@ export function DashboardPage() {
                         }
                       </div>
                     ) : (
-                      "Select a project to copy from..."
+                      <span className="text-muted-foreground">
+                        {projects && projects.length > 0 
+                          ? "Select from your existing projects..." 
+                          : "No projects available - create a project first"}
+                      </span>
                     )}
                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                   </Button>
@@ -547,10 +641,16 @@ export function DashboardPage() {
                   </Command>
                 </PopoverContent>
               </Popover>
-              {selectedProjectId && (
+              {selectedProjectId ? (
                 <p className="text-sm text-muted-foreground mt-2">
                   The template will include all nodes, contexts, and structure
                   from the selected project.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {projects && projects.length > 0 
+                    ? "Templates are created from existing projects. Select a project above to continue."
+                    : "You need at least one project to create a template. Create a project first."}
                 </p>
               )}
             </div>
@@ -573,7 +673,7 @@ export function DashboardPage() {
             </Button>
             <Button
               onClick={handleCreateTemplate}
-              disabled={!templateName.trim() || createTemplate.isPending}
+              disabled={!templateName.trim() || !selectedProjectId || createTemplate.isPending}
             >
               {createTemplate.isPending ? "Creating..." : "Create Template"}
             </Button>

@@ -168,7 +168,7 @@ export interface Template {
 export interface TemplateCreate {
   name: string;
   description?: string | null;
-  source_project_id?: string | null;
+  source_project_id: string;
   category_tags?: string[];
 }
 

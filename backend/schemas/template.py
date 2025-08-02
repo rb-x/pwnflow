@@ -7,7 +7,7 @@ class TemplateBase(BaseModel):
     description: Optional[str] = None
 
 class TemplateCreate(TemplateBase):
-    source_project_id: Optional[UUID] = None
+    source_project_id: UUID
     category_tags: Optional[List[str]] = None
 
 class TemplateUpdate(TemplateBase):

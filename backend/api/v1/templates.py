@@ -37,24 +37,15 @@ async def create_template(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """
-    Create a new template.
-    If a source_project_id is provided, the template will be a clone of that project.
-    Otherwise, a new blank template will be created.
+    Create a new template from an existing project.
     """
-    if template_in.source_project_id:
-        # Create a template from a project
-        template = await template_crud.create_template_from_project(
-            session, template_in=template_in, owner_id=current_user.id
-        )
-        if not template:
-            raise HTTPException(
-                status_code=404,
-                detail="Source project not found or you do not have permission to access it.",
-            )
-    else:
-        # Create a blank template
-        template = await template_crud.create_template(
-            session, template_in=template_in, owner_id=current_user.id
+    template = await template_crud.create_template_from_project(
+        session, template_in=template_in, owner_id=current_user.id
+    )
+    if not template:
+        raise HTTPException(
+            status_code=404,
+            detail="Source project not found or you do not have permission to access it.",
         )
     return template
 

@@ -103,7 +103,7 @@ export function TemplatesPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
-  const [projectSearchOpen, setProjectSearchOpen] = useState(false);
+  const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
   const [sortOption, setSortOption] = useState<
     "date_desc" | "date_asc" | "name_asc" | "name_desc"
   >("date_desc");
@@ -152,7 +152,7 @@ export function TemplatesPage() {
   }, [templates, searchQuery, sortOption]);
 
   const handleCreateTemplate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !selectedProjectId) return;
 
     const uniqueTags = Array.from(
       new Set(tags.map((tag) => tag.toLowerCase()))
@@ -161,7 +161,7 @@ export function TemplatesPage() {
     await createTemplate.mutateAsync({
       name,
       description: description || null,
-      source_project_id: selectedProjectId || undefined,
+      source_project_id: selectedProjectId,
       category_tags: uniqueTags.length > 0 ? uniqueTags : undefined,
     });
 
@@ -170,6 +170,7 @@ export function TemplatesPage() {
     setDescription("");
     setTags([]);
     setSelectedProjectId(null);
+    setProjectPopoverOpen(false);
   };
 
   const handleEditTemplate = async () => {
@@ -423,12 +424,77 @@ export function TemplatesPage() {
             <DialogHeader>
               <DialogTitle>Create New Template</DialogTitle>
               <DialogDescription>
-                Create a reusable template for your assessments
+                Create a reusable template from an existing project
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Template Name</Label>
+                <Label htmlFor="source-project">Source Project *</Label>
+                <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between"
+                    >
+                      {selectedProjectId ? (
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4" />
+                          {
+                            projects?.find((p) => p.id === selectedProjectId)
+                              ?.name
+                          }
+                        </div>
+                      ) : (
+                        "Select a project..."
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search projects..." />
+                      <CommandList>
+                        <CommandEmpty>No project found.</CommandEmpty>
+                        <CommandGroup>
+                          {projects?.map((project) => (
+                            <CommandItem
+                              key={project.id}
+                              value={project.name}
+                              onSelect={() => {
+                                setSelectedProjectId(
+                                  selectedProjectId === project.id
+                                    ? null
+                                    : project.id
+                                );
+                                setProjectPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  " h-4 w-4 shrink-0",
+                                  selectedProjectId === project.id
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              {project.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {selectedProjectId && (
+                  <p className="text-xs text-muted-foreground">
+                    The template will include all nodes, connections, and
+                    configurations from this project
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Template Name *</Label>
                 <Input
                   id="name"
                   value={name}
@@ -447,87 +513,6 @@ export function TemplatesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Create from Project (optional)</Label>
-                <Popover
-                  open={projectSearchOpen}
-                  onOpenChange={setProjectSearchOpen}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={projectSearchOpen}
-                      className="w-full justify-between"
-                    >
-                      {selectedProjectId ? (
-                        <div className="flex items-center gap-2">
-                          <FolderOpen className="h-4 w-4" />
-                          {
-                            projects?.find((p) => p.id === selectedProjectId)
-                              ?.name
-                          }
-                        </div>
-                      ) : (
-                        "Select a project to copy from..."
-                      )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search projects..." />
-                      <CommandList className="max-h-[200px]">
-                        <CommandEmpty>No projects found.</CommandEmpty>
-                        <CommandGroup>
-                          {projects?.map((project) => (
-                            <CommandItem
-                              key={project.id}
-                              value={project.name}
-                              onSelect={() => {
-                                setSelectedProjectId(
-                                  selectedProjectId === project.id
-                                    ? null
-                                    : project.id
-                                );
-                                setProjectSearchOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  " h-4 w-4 shrink-0",
-                                  selectedProjectId === project.id
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate">
-                                  {project.name}
-                                </div>
-                                {project.description && (
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    {project.description}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground ml-2 shrink-0">
-                                {project.node_count || 0} nodes
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {selectedProjectId && (
-                  <p className="text-xs text-muted-foreground">
-                    The template will include all nodes, connections, and
-                    configurations from the selected project.
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
                 <Label>Category Tags</Label>
                 <TagInput
                   value={tags}
@@ -543,7 +528,7 @@ export function TemplatesPage() {
               </Button>
               <Button
                 onClick={handleCreateTemplate}
-                disabled={!name.trim() || createTemplate.isPending}
+                disabled={!name.trim() || !selectedProjectId || createTemplate.isPending}
               >
                 {createTemplate.isPending ? "Creating..." : "Create Template"}
               </Button>
