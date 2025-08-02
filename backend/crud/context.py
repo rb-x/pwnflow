@@ -94,6 +94,35 @@ async def get_context_with_variables(
     
     return Context.model_validate(context_data)
 
+async def update_context(
+    session: AsyncSession, context_id: UUID, context_in: ContextUpdate, project_id: UUID, owner_id: UUID
+) -> Context | None:
+    props = context_in.model_dump(exclude_unset=True)
+    if not props:
+        # If no properties to update, just return the current context
+        return await get_context_with_variables(session, context_id, project_id, owner_id, include_sensitive=True)
+    
+    query = """
+    MATCH (user:User {id: $owner_id})-[:OWNS]->(project:Project {id: $project_id})-[:HAS_CONTEXT]->(context:Context {id: $context_id})
+    SET context += $props
+    RETURN context
+    """
+    result = await session.run(
+        query,
+        {
+            "owner_id": str(owner_id),
+            "project_id": str(project_id),
+            "context_id": str(context_id),
+            "props": props,
+        },
+    )
+    record = await result.single()
+    if not record:
+        return None
+    
+    # Return the updated context with variables
+    return await get_context_with_variables(session, context_id, project_id, owner_id, include_sensitive=True)
+
 async def delete_context(session: AsyncSession, context_id: UUID, project_id: UUID, owner_id: UUID) -> bool:
     # Deletes context and all its variables due to DETACH DELETE
     query = """

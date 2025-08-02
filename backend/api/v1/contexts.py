@@ -3,7 +3,7 @@ from typing import List
 from uuid import UUID
 from neo4j import AsyncSession
 
-from schemas.context import Context, ContextCreate
+from schemas.context import Context, ContextCreate, ContextUpdate
 from crud import context as context_crud
 from api.dependencies import get_current_user, get_session
 from schemas.user import User
@@ -51,6 +51,21 @@ async def get_context(
 ):
     context = await context_crud.get_context_with_variables(
         session, context_id=context_id, project_id=project_id, owner_id=current_user.id, include_sensitive=include_sensitive
+    )
+    if not context:
+        raise HTTPException(status_code=404, detail="Context not found.")
+    return context
+
+@contexts_router.put("/{context_id}", response_model=Context)
+async def update_context(
+    project_id: UUID,
+    context_id: UUID,
+    context_in: ContextUpdate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    context = await context_crud.update_context(
+        session, context_id=context_id, context_in=context_in, project_id=project_id, owner_id=current_user.id
     )
     if not context:
         raise HTTPException(status_code=404, detail="Context not found.")
