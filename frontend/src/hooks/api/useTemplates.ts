@@ -117,6 +117,9 @@ export function useCreateProjectFromTemplate() {
     }) => templatesApi.cloneToProject(templateId, name, description),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // Also invalidate node queries to ensure fresh data for the new project
+      queryClient.invalidateQueries({ queryKey: ["nodes", "project", project.id] });
+      queryClient.invalidateQueries({ queryKey: ["commands"] });
       toast.success("Project created from template");
       navigate(`/projects/${project.id}`);
     },

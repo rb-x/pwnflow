@@ -49,8 +49,11 @@ export const CustomNode = memo(
     const layoutDirection = useMindMapStore((state) => state.layoutDirection);
 
     // Get real-time command count - use hook for projects, data for templates
-    const { data: fetchedCommands = [] } = useNodeCommands(data.projectId, id);
-    const commands = data.commands || fetchedCommands;
+    const isTemplate = !data.projectId || data.projectId === "template";
+    const { data: fetchedCommands = [] } = useNodeCommands(data.projectId, id, {
+      enabled: !isTemplate && !!data.projectId && !!id
+    });
+    const commands = isTemplate ? (data.commands || []) : fetchedCommands;
 
     // Check if this node is in focus mode
     const nodes = reactFlowInstance.getNodes();

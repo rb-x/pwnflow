@@ -121,14 +121,17 @@ export function NodeDetailsDrawer({
   // Command hooks
   const { data: fetchedCommands = [] } = useNodeCommands(
     projectId,
-    selectedNodeId || ""
+    selectedNodeId || "",
+    { enabled: !isReadOnly && !!selectedNodeId }
   );
   
-  // For templates, use commands from node data; for projects, use fetched commands
+  // For templates, use commands from node data; for projects, use fetched commands for real-time updates
   const commands = useMemo(() => {
     if (isReadOnly && node?.commands) {
+      // For templates, always use node.commands
       return node.commands;
     }
+    // For projects, always use fetched commands to ensure real-time updates
     return fetchedCommands;
   }, [isReadOnly, node?.commands, fetchedCommands]);
   

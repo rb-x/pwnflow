@@ -13,11 +13,11 @@ const commandKeys = {
 };
 
 // Get all commands for a node
-export function useNodeCommands(projectId: string, nodeId: string) {
+export function useNodeCommands(projectId: string, nodeId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: commandKeys.byNode(projectId, nodeId),
     queryFn: () => commandsService.getNodeCommands(projectId, nodeId),
-    enabled: !!projectId && !!nodeId,
+    enabled: options?.enabled !== undefined ? options.enabled : (!!projectId && !!nodeId),
   });
 }
 
