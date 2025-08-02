@@ -166,10 +166,10 @@ class ExportService:
         
         project = dict(project_record["p"])
         # Convert DateTime objects to ISO strings
-        if "created_at" in project:
-            project["created_at"] = project["created_at"].isoformat() if project["created_at"] else None
-        if "updated_at" in project:
-            project["updated_at"] = project["updated_at"].isoformat() if project["updated_at"] else None
+        if "created_at" in project and project["created_at"] and hasattr(project["created_at"], 'isoformat'):
+            project["created_at"] = project["created_at"].isoformat()
+        if "updated_at" in project and project["updated_at"] and hasattr(project["updated_at"], 'isoformat'):
+            project["updated_at"] = project["updated_at"].isoformat()
         
         # Fetch nodes
         nodes_result = await session.run("""
@@ -183,10 +183,10 @@ class ExportService:
         async for record in nodes_result:
             node = dict(record["n"])
             # Convert DateTime objects to ISO strings
-            if "created_at" in node:
-                node["created_at"] = node["created_at"].isoformat() if node["created_at"] else None
-            if "updated_at" in node:
-                node["updated_at"] = node["updated_at"].isoformat() if node["updated_at"] else None
+            if "created_at" in node and node["created_at"] and hasattr(node["created_at"], 'isoformat'):
+                node["created_at"] = node["created_at"].isoformat()
+            if "updated_at" in node and node["updated_at"] and hasattr(node["updated_at"], 'isoformat'):
+                node["updated_at"] = node["updated_at"].isoformat()
             node["tags"] = record["tags"]
             nodes.append(node)
         
@@ -212,10 +212,10 @@ class ExportService:
         async for record in contexts_result:
             context = dict(record["c"])
             # Convert DateTime objects to ISO strings
-            if "created_at" in context:
-                context["created_at"] = context["created_at"].isoformat() if context["created_at"] else None
-            if "updated_at" in context:
-                context["updated_at"] = context["updated_at"].isoformat() if context["updated_at"] else None
+            if "created_at" in context and context["created_at"] and hasattr(context["created_at"], 'isoformat'):
+                context["created_at"] = context["created_at"].isoformat()
+            if "updated_at" in context and context["updated_at"] and hasattr(context["updated_at"], 'isoformat'):
+                context["updated_at"] = context["updated_at"].isoformat()
             contexts.append(context)
         
         # Fetch variables (if requested)
@@ -230,10 +230,10 @@ class ExportService:
             async for record in variables_result:
                 var = dict(record["v"])
                 # Convert DateTime objects to ISO strings
-                if "created_at" in var:
-                    var["created_at"] = var["created_at"].isoformat() if var["created_at"] else None
-                if "updated_at" in var:
-                    var["updated_at"] = var["updated_at"].isoformat() if var["updated_at"] else None
+                if "created_at" in var and var["created_at"] and hasattr(var["created_at"], 'isoformat'):
+                    var["created_at"] = var["created_at"].isoformat()
+                if "updated_at" in var and var["updated_at"] and hasattr(var["updated_at"], 'isoformat'):
+                    var["updated_at"] = var["updated_at"].isoformat()
                 var["context_id"] = record["context_id"]
                 variables.append(var)
         
@@ -248,10 +248,10 @@ class ExportService:
         async for record in commands_result:
             cmd = dict(record["cmd"])
             # Convert DateTime objects to ISO strings
-            if "created_at" in cmd:
-                cmd["created_at"] = cmd["created_at"].isoformat() if cmd["created_at"] else None
-            if "updated_at" in cmd:
-                cmd["updated_at"] = cmd["updated_at"].isoformat() if cmd["updated_at"] else None
+            if "created_at" in cmd and cmd["created_at"] and hasattr(cmd["created_at"], 'isoformat'):
+                cmd["created_at"] = cmd["created_at"].isoformat()
+            if "updated_at" in cmd and cmd["updated_at"] and hasattr(cmd["updated_at"], 'isoformat'):
+                cmd["updated_at"] = cmd["updated_at"].isoformat()
             cmd["node_id"] = record["node_id"]
             # Always include command data - commands are not considered sensitive
             commands.append(cmd)
@@ -385,10 +385,10 @@ class ExportService:
         
         template = dict(template_record["t"])
         # Convert DateTime objects to ISO strings
-        if "created_at" in template:
-            template["created_at"] = template["created_at"].isoformat() if template["created_at"] else None
-        if "updated_at" in template:
-            template["updated_at"] = template["updated_at"].isoformat() if template["updated_at"] else None
+        if "created_at" in template and template["created_at"] and hasattr(template["created_at"], 'isoformat'):
+            template["created_at"] = template["created_at"].isoformat()
+        if "updated_at" in template and template["updated_at"] and hasattr(template["updated_at"], 'isoformat'):
+            template["updated_at"] = template["updated_at"].isoformat()
         
         # Fetch nodes
         nodes_result = await session.run("""
@@ -401,10 +401,10 @@ class ExportService:
         async for record in nodes_result:
             node = dict(record["n"])
             # Convert DateTime objects to ISO strings
-            if "created_at" in node:
-                node["created_at"] = node["created_at"].isoformat() if node["created_at"] else None
-            if "updated_at" in node:
-                node["updated_at"] = node["updated_at"].isoformat() if node["updated_at"] else None
+            if "created_at" in node and node["created_at"] and hasattr(node["created_at"], 'isoformat'):
+                node["created_at"] = node["created_at"].isoformat()
+            if "updated_at" in node and node["updated_at"] and hasattr(node["updated_at"], 'isoformat'):
+                node["updated_at"] = node["updated_at"].isoformat()
             node["tags"] = record["tags"]
             nodes.append(node)
         
@@ -428,10 +428,10 @@ class ExportService:
         async for record in contexts_result:
             context = dict(record["c"])
             # Convert DateTime objects to ISO strings
-            if "created_at" in context:
-                context["created_at"] = context["created_at"].isoformat() if context["created_at"] else None
-            if "updated_at" in context:
-                context["updated_at"] = context["updated_at"].isoformat() if context["updated_at"] else None
+            if "created_at" in context and context["created_at"] and hasattr(context["created_at"], 'isoformat'):
+                context["created_at"] = context["created_at"].isoformat()
+            if "updated_at" in context and context["updated_at"] and hasattr(context["updated_at"], 'isoformat'):
+                context["updated_at"] = context["updated_at"].isoformat()
             contexts.append(context)
         
         # Fetch commands (without outputs)
@@ -444,10 +444,10 @@ class ExportService:
         async for record in commands_result:
             cmd = dict(record["cmd"])
             # Convert DateTime objects to ISO strings
-            if "created_at" in cmd:
-                cmd["created_at"] = cmd["created_at"].isoformat() if cmd["created_at"] else None
-            if "updated_at" in cmd:
-                cmd["updated_at"] = cmd["updated_at"].isoformat() if cmd["updated_at"] else None
+            if "created_at" in cmd and cmd["created_at"] and hasattr(cmd["created_at"], 'isoformat'):
+                cmd["created_at"] = cmd["created_at"].isoformat()
+            if "updated_at" in cmd and cmd["updated_at"] and hasattr(cmd["updated_at"], 'isoformat'):
+                cmd["updated_at"] = cmd["updated_at"].isoformat()
             cmd["node_id"] = record["node_id"]
             commands.append(cmd)
         
