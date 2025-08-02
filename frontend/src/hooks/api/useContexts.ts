@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { contextsApi } from "@/services/api/contexts";
+import { templatesApi } from "@/services/api/templates";
 import type {
   Context,
   ContextCreate,
@@ -28,6 +29,22 @@ export function useProjectContexts(projectId: string) {
       return response.data;
     },
     enabled: !!projectId,
+  });
+}
+
+// Get contexts for either a project or template
+export function useProjectOrTemplateContexts(id: string, isTemplate: boolean = false) {
+  return useQuery({
+    queryKey: isTemplate ? [...contextKeys.lists(), "template", id] : contextKeys.list(id),
+    queryFn: async () => {
+      if (isTemplate) {
+        return await templatesApi.getContexts(id);
+      } else {
+        const response = await contextsApi.list(id);
+        return response.data;
+      }
+    },
+    enabled: !!id,
   });
 }
 

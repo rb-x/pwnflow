@@ -71,7 +71,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useProjectNodes, useDeleteNode } from "@/hooks/api/useNodes";
-import { useProjectContexts } from "@/hooks/api/useContexts";
+import { useProjectContexts, useProjectOrTemplateContexts } from "@/hooks/api/useContexts";
 import { useNodeTableStore } from "@/store/nodeTableStore";
 import { useMindMapStore } from "@/store/mindMapStore";
 import { useReactFlow } from "@xyflow/react";
@@ -163,8 +163,9 @@ export function NodeTableDrawer({
     isReadOnly
   );
   const nodes = projectData?.nodes || [];
-  const { data: contexts, isLoading: isLoadingContexts } =
-    useProjectContexts(projectId);
+  // Use the new hook that handles both projects and templates
+  const { data: contexts, isLoading: isLoadingContexts } = 
+    useProjectOrTemplateContexts(projectId, isReadOnly);
 
   // Pagination state
   const [page, setPage] = useState(1);

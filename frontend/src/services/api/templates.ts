@@ -62,4 +62,11 @@ export const templatesApi = {
     );
     return response.data;
   },
+
+  getContexts: async (templateId: string): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(
+      `/templates/${templateId}/contexts`
+    );
+    return response.data;
+  },
 };

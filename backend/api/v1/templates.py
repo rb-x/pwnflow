@@ -12,6 +12,7 @@ from schemas.export import (
     TemplateExportRequest, ExportJobResponse, ImportPreviewResponse
 )
 from schemas.node import Node
+from schemas.context import Context
 from crud import template as template_crud
 from api.dependencies import get_current_user, get_session
 from schemas.user import User
@@ -249,6 +250,33 @@ async def get_template_nodes(
                 links.append(NodeLink(source=str(parent_id), target=str(node.id)))
     
     return NodesWithLinks(nodes=nodes, links=links)
+
+
+@template_crud_router.get("/{template_id}/contexts", response_model=List[Context])
+async def get_template_contexts(
+    template_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all contexts for a specific template.
+    """
+    # First verify the template exists and user has access
+    template = await template_crud.get_template(session, template_id=template_id, owner_id=current_user.id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Get contexts from the template
+    contexts_data = await template_crud.get_all_contexts_for_template(
+        session, template_id=template_id, owner_id=current_user.id
+    )
+    
+    # Convert to Context objects
+    contexts = []
+    for context_data in contexts_data:
+        contexts.append(Context(**context_data))
+    
+    return contexts
 
 
 # Export/Import endpoints

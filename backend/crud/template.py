@@ -399,4 +399,66 @@ async def get_all_nodes_for_template(session: AsyncSession, template_id: UUID, o
             node_data["findings"] = ""
             
         nodes.append(node_data)
-    return nodes 
+    return nodes
+
+
+async def get_all_contexts_for_template(session: AsyncSession, template_id: UUID, owner_id: UUID) -> List[dict]:
+    """
+    Retrieves all contexts with their variables for a specific template.
+    Returns empty list if template exists but has no contexts.
+    """
+    # First check if the template exists and belongs to the user
+    check_query = """
+    MATCH (user:User {id: $owner_id})-[:OWNS]->(template:Template {id: $template_id})
+    RETURN template.id as id
+    """
+    check_result = await session.run(
+        check_query,
+        {
+            "owner_id": str(owner_id),
+            "template_id": str(template_id),
+        },
+    )
+    if not await check_result.single():
+        return []
+    
+    # Now get all contexts with their variables
+    query = """
+    MATCH (user:User {id: $owner_id})-[:OWNS]->(template:Template {id: $template_id})-[:HAS_CONTEXT]->(context:Context)
+    OPTIONAL MATCH (context)-[:HAS_VARIABLE]->(variable:Variable)
+    WITH context, collect(variable) as variables
+    RETURN context, variables
+    """
+    result = await session.run(
+        query,
+        {
+            "owner_id": str(owner_id),
+            "template_id": str(template_id),
+        },
+    )
+    
+    contexts = []
+    async for record in result:
+        context_data = dict(record["context"])
+        
+        # Convert Neo4j DateTime objects to Python datetime
+        if "created_at" in context_data:
+            context_data["created_at"] = convert_neo4j_datetime(context_data["created_at"])
+        if "updated_at" in context_data:
+            context_data["updated_at"] = convert_neo4j_datetime(context_data["updated_at"])
+        
+        # Process variables
+        context_data["variables"] = []
+        for var in record["variables"]:
+            if var is not None:
+                var_data = dict(var)
+                # Convert Neo4j DateTime objects for variables
+                if "created_at" in var_data:
+                    var_data["created_at"] = convert_neo4j_datetime(var_data["created_at"])
+                if "updated_at" in var_data:
+                    var_data["updated_at"] = convert_neo4j_datetime(var_data["updated_at"])
+                context_data["variables"].append(var_data)
+        
+        contexts.append(context_data)
+    
+    return contexts 
