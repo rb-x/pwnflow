@@ -119,10 +119,19 @@ export function NodeDetailsDrawer({
   const { setNodes } = useReactFlow();
 
   // Command hooks
-  const { data: commands = [] } = useNodeCommands(
+  const { data: fetchedCommands = [] } = useNodeCommands(
     projectId,
     selectedNodeId || ""
   );
+  
+  // For templates, use commands from node data; for projects, use fetched commands
+  const commands = useMemo(() => {
+    if (isReadOnly && node?.commands) {
+      return node.commands;
+    }
+    return fetchedCommands;
+  }, [isReadOnly, node?.commands, fetchedCommands]);
+  
   const createCommand = useCreateCommand();
   const updateCommand = useUpdateCommand();
   const deleteCommand = useDeleteCommand();

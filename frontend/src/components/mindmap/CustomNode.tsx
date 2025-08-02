@@ -38,6 +38,7 @@ const statusIcons = {
 interface CustomNodeData extends NodeData {
   label?: string;
   projectId: string; // Add projectId to the interface
+  commands?: any[]; // Commands are included in node data for templates
 }
 
 export const CustomNode = memo(
@@ -47,8 +48,9 @@ export const CustomNode = memo(
     const reactFlowInstance = useReactFlow();
     const layoutDirection = useMindMapStore((state) => state.layoutDirection);
 
-    // Get real-time command count
-    const { data: commands = [] } = useNodeCommands(data.projectId, id);
+    // Get real-time command count - use hook for projects, data for templates
+    const { data: fetchedCommands = [] } = useNodeCommands(data.projectId, id);
+    const commands = data.commands || fetchedCommands;
 
     // Check if this node is in focus mode
     const nodes = reactFlowInstance.getNodes();
