@@ -53,7 +53,8 @@ export const CustomNode = memo(
     const { data: fetchedCommands = [] } = useNodeCommands(data.projectId, id, {
       enabled: !isTemplate && !!data.projectId && !!id
     });
-    const commands = isTemplate ? (data.commands || []) : fetchedCommands;
+    // For templates use node data, for projects use fetched or fallback to node data
+    const commands = isTemplate ? (data.commands || []) : (fetchedCommands.length > 0 ? fetchedCommands : (data.commands || []));
 
     // Check if this node is in focus mode
     const nodes = reactFlowInstance.getNodes();
