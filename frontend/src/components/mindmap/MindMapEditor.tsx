@@ -1732,6 +1732,20 @@ export function MindMapEditor({
           onNodeClick={handleNodeClick}
           onEdgeDoubleClick={handleEdgeDoubleClick}
           onNodesDelete={handleNodesDelete}
+          onDoubleClick={(event) => {
+            // Check if we clicked on empty space (not on a node/edge)
+            const target = event.target as HTMLElement;
+            const isPane = target.classList.contains('react-flow__pane') || 
+                          target.classList.contains('react-flow__container');
+            
+            if (isPane && !isTemplate && reactFlowInstance) {
+              const flowPosition = reactFlowInstance.screenToFlowPosition({
+                x: event.clientX,
+                y: event.clientY,
+              });
+              handleAddNode(flowPosition);
+            }
+          }}
           onNodeDragStop={(_event, node) => {
             // Debounced update to prevent too many API calls
             if (!isTemplate) {
@@ -1752,6 +1766,7 @@ export function MindMapEditor({
           deleteKeyCode={["Delete", "Backspace"]}
           multiSelectionKeyCode={["Shift", "Meta", "Control"]}
           selectionOnDrag
+          zoomOnDoubleClick={false}
           style={{ background: "transparent" }}
           proOptions={{ hideAttribution: true }}
         >
@@ -1786,7 +1801,7 @@ export function MindMapEditor({
           x={contextMenu.x}
           y={contextMenu.y}
           nodeId={contextMenu.nodeId}
-          onAddNode={handleAddNode}
+          onAddNode={() => handleAddNode(contextMenu.flowX && contextMenu.flowY ? { x: contextMenu.flowX, y: contextMenu.flowY } : undefined)}
           onEditNode={handleEditNode}
           onDeleteNode={handleDeleteNode}
           onDuplicateNode={handleDuplicateNode}
