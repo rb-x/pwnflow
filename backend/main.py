@@ -1,9 +1,11 @@
 import sys
 import os
 import logging
+import secrets
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
+from neo4j import AsyncSession
 
 from db.database import get_driver, close_driver
 from db.redis import close_redis
@@ -12,6 +14,8 @@ from api.exception_handlers import validation_exception_handler
 from routers import websocket
 from core.config import settings
 from fastapi.middleware.cors import CORSMiddleware
+from crud import user as user_crud
+from schemas.user import UserCreate
 
 # Configure logging
 logging.basicConfig(
@@ -30,6 +34,19 @@ async def lifespan(app: FastAPI):
     logger.info(f"GEMINI_MODEL: {settings.GEMINI_MODEL}")
     
     app.state.neo4j_driver = get_driver()
+    
+    # Create admin user if no users exist
+    try:
+        async with app.state.neo4j_driver.session() as session:
+            existing_users = await session.run("MATCH (u:User) RETURN COUNT(u) as count")
+            user_count = (await existing_users.single())["count"]
+            
+            if user_count == 0:
+                logger.warning("No users found in database!")
+                logger.warning("Use CLI to create user: python create_user.py create admin admin@penflow.local")
+                logger.warning("Registration is disabled by default for security")
+    except Exception as e:
+        logger.error(f"Failed to create admin user: {e}")
     
     # Ensure database schema exists (eliminates Neo4j warnings)
     # Disabled by default - uncomment if you get Neo4j label warnings

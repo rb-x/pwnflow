@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str
     GEMINI_MODEL: str = "gemini-2.0-flash"
 
+    # Registration Control
+    ENABLE_REGISTRATION: bool = False
+    
     # CORS
     BACKEND_CORS_ORIGINS: List[str]
 

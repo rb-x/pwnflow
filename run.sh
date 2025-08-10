@@ -110,6 +110,9 @@ REDIS_URL=redis://localhost:6379
 # CORS - Allow all origins for development
 BACKEND_CORS_ORIGINS='["*"]'
 
+# Registration Control
+ENABLE_REGISTRATION=false
+
 # AI Settings (optional - add your key if using AI features)
 GOOGLE_API_KEY=
 GEMINI_MODEL=gemini-2.0-flash
@@ -178,6 +181,9 @@ REDIS_URL=redis://redis:6379
 # CORS (update with your domain)
 BACKEND_CORS_ORIGINS='["https://yourdomain.com", "https://www.yourdomain.com"]'
 
+# Registration Control (disabled by default for security)
+ENABLE_REGISTRATION=false
+
 # Frontend Configuration (optional - defaults work for most cases)
 # FRONTEND_API_URL=/api/v1  # Use relative URL (recommended)
 # FRONTEND_API_URL=https://api.yourdomain.com/api/v1  # Or absolute URL
@@ -227,6 +233,11 @@ EOF
         echo "  - Frontend: http://localhost"
         echo "  - API: http://localhost/api/v1"
         echo "  - WebSocket: ws://localhost/ws"
+        echo ""
+        print_warning "FIRST RUN SETUP:"
+        echo "After containers start, create your first user with:"
+        echo "  docker exec -it penflow-backend python create_user.py create admin admin@yourcompany.com"
+        echo ""
 
         # Load environment variables for docker-compose substitution
         if [ -f "./.env.production" ]; then

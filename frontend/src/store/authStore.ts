@@ -43,10 +43,20 @@ export const useAuthStore = create<AuthState>()(
           const user = await authService.register(data);
           set({ user, isAuthenticated: true, isLoading: false });
         } catch (error: any) {
-          set({
-            error: error.response?.data?.detail || "Registration failed",
-            isLoading: false,
-          });
+          const errorDetail = error.response?.data?.detail || "Registration failed";
+          
+          // Handle specific registration disabled error
+          if (error.response?.status === 403 && errorDetail.includes("Registration is disabled")) {
+            set({
+              error: "Registration is currently disabled. Contact your administrator to create an account.",
+              isLoading: false,
+            });
+          } else {
+            set({
+              error: errorDetail,
+              isLoading: false,
+            });
+          }
           throw error;
         }
       },

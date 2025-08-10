@@ -170,11 +170,27 @@ This will:
 - Add your `GOOGLE_API_KEY` for AI features (optional)
 - Review all generated passwords
 
-3. Additional production steps:
+3. Create your first user (registration is disabled by default for security):
+
+```bash
+# Create admin user via CLI (inside backend container)
+docker exec -it penflow-backend python create_user.py create admin admin@yourcompany.com
+
+# Or using docker-compose:
+docker-compose exec backend python create_user.py create admin admin@yourcompany.com
+
+# The script will output:
+# User created successfully:
+# Username: admin
+# Password: <secure-random-password>
+# Email: admin@yourcompany.com
+```
+
+4. Additional production steps:
 
  ⚠️ Security Notice: We absolutely don't recommend exposing Penflow to the internet. If you must:
   1. Whitelist trusted IP addresses through your WAF or firewall
-  2. Disable the registration endpoint after setup by blocking /api/v1/auth/register at the reverse proxy level.
+  2. Registration is disabled by default - only manual user creation via SSH
 
 - Set up SSL/TLS certificates (Let's Encrypt recommended)
 - Set up monitoring and logging

@@ -39,6 +39,11 @@ async def register(
     """
     Create new user.
     """
+    if not settings.ENABLE_REGISTRATION:
+        raise HTTPException(
+            status_code=403,
+            detail="Registration is disabled.",
+        )
     user = await user_crud.get_user_by_username(session, username=user_in.username)
     if user:
         raise HTTPException(
