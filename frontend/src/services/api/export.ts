@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { env } from "@/config/env";
 
 export interface ExportEncryption {
   method: "none" | "password" | "generated";
@@ -63,7 +64,7 @@ export const exportApi = {
   // Download exported file
   getDownloadUrl: (jobId: string) => {
     const baseUrl =
-      import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+      env.API_BASE_URL;
     return `${baseUrl}/exports/download/${jobId}`;
   },
 

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "./api/useProjects";
 import { nodeKeys } from "./api/useNodes";
+import { env } from "@/config/env";
 
 export function useProjectRefresh(projectId: string) {
   const ws = useRef<WebSocket | null>(null);
@@ -26,11 +27,11 @@ export function useProjectRefresh(projectId: string) {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.host;
 
-      // In production with nginx, use relative path
-      // In development, connect directly to backend
-      const wsUrl = import.meta.env.VITE_API_BASE_URL?.startsWith("http")
+      // Use dynamic WebSocket URL based on environment
+      const isDev = import.meta.env.DEV;
+      const wsUrl = isDev
         ? `ws://localhost:8000/ws/projects/${projectId}` // Development
-        : `${protocol}//${host}/ws/projects/${projectId}`; // Production with nginx
+        : `${protocol}//${host}/ws/projects/${projectId}`; // Production
 
       // console.log("[useProjectRefresh] Creating WebSocket with URL:", wsUrl);
       ws.current = new WebSocket(wsUrl);

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { authService } from "@/services/auth/authService";
+import { env } from "@/config/env";
 import { useCreateNode, useLinkNodes, useAddTag } from "@/hooks/api/useNodes";
 import { nodesApi } from "@/services/api/nodes";
 import { cn } from "@/lib/utils";
@@ -90,7 +91,7 @@ export function AISuggestChildrenDialog({
     try {
       const token = authService.getToken();
       const apiUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+        env.API_BASE_URL;
 
       const response = await fetch(
         `${apiUrl}/projects/${projectId}/ai/suggest-children/${parentNodeId}`,

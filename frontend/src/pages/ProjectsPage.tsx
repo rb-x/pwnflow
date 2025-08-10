@@ -43,6 +43,7 @@ import { LegacyImportModal } from "@/components/import/LegacyImportModal";
 import { ProjectExportDialog } from "@/components/export/ProjectExportDialog";
 import { ProjectImportDialog } from "@/components/export/ProjectImportDialog";
 import { BulkExportDialog } from "@/components/export/BulkExportDialog";
+import { env } from "@/config/env";
 import { ProjectProgressModal } from "@/components/ProjectProgressModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -211,7 +212,7 @@ export function ProjectsPage() {
       // Get the file blob from the export API
       const response = await fetch(
         `${
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1"
+          env.API_BASE_URL
         }/export/download/${jobId}`,
         {
           headers: {

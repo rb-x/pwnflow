@@ -37,6 +37,7 @@ import {
 } from "@/hooks/api/useNodes";
 import { nodesApi } from "@/services/api/nodes";
 import { toast } from "sonner";
+import { env } from "@/config/env";
 import { CheckCircle2, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAutoLayout } from "@/hooks/useAutoLayout";
@@ -416,7 +417,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     setError(null);
 
     const apiUrl =
-      import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+      env.API_BASE_URL;
 
     try {
       const response = await fetch(`${apiUrl}/projects/${projectId}/ai/chat`, {

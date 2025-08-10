@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { X, Upload, AlertCircle, CheckCircle, FileJson } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "@/services/auth/authService";
+import { env } from "@/config/env";
 
 interface ImportProgress {
   current_step: string;
@@ -66,7 +67,7 @@ export const LegacyImportModal: React.FC<LegacyImportModalProps> = ({
   const validateData = async (data: any) => {
     try {
       const apiUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+        env.API_BASE_URL;
       const token = authService.getToken();
 
       const response = await fetch(`${apiUrl}/legacy/import/validate`, {
@@ -95,7 +96,7 @@ export const LegacyImportModal: React.FC<LegacyImportModalProps> = ({
 
     try {
       const apiUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+        env.API_BASE_URL;
       const token = authService.getToken();
 
       const response = await fetch(`${apiUrl}/legacy/import`, {
