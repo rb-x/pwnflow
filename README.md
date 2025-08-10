@@ -174,10 +174,10 @@ This will:
 
 ```bash
 # Create admin user via CLI (inside backend container)
-docker exec -it penflow-backend python create_user.py create admin admin@yourcompany.com
+docker exec -it penflow-backend-prod python create_user.py create admin admin@yourcompany.com
 
 # Or using docker-compose:
-docker-compose exec backend python create_user.py create admin admin@yourcompany.com
+docker compose -f docker-compose.prod.yml exec backend python create_user.py create admin admin@yourcompany.com
 
 # The script will output:
 # User created successfully:
