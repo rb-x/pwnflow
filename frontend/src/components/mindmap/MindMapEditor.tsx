@@ -473,8 +473,7 @@ export function MindMapEditor({
             source: link.source,
             target: link.target,
             type: edgeType,
-            animated: false,
-            style: { stroke: "#94a3b8" },
+            style: { stroke: "var(--muted-foreground)", strokeWidth: 2 },
           }));
           
           setEdges(allFlowEdges);
@@ -524,14 +523,7 @@ export function MindMapEditor({
         getAncestors(nodeId);
         getDescendants(nodeId);
 
-        // Update viewport to show focused lineage only
-        reactFlowInstance?.fitView({
-          duration: 800,
-          padding: 0.1,
-          nodes: nodes.filter((n) => relatedNodeIds.has(n.id)),
-        });
-
-        // Filter nodes to show only related ones with enhanced styling
+        // Filter nodes to show only lineage with blue glow
         setNodes((nds) =>
           nds
             .filter((node) => relatedNodeIds.has(node.id))
@@ -545,23 +537,11 @@ export function MindMapEditor({
             }))
         );
 
-        // Filter edges to show only those connecting related nodes with glow
+        // Filter edges to show only those connecting lineage nodes
         setEdges((eds) =>
-          eds
-            .filter((edge) => 
-              relatedNodeIds.has(edge.source) && relatedNodeIds.has(edge.target)
-            )
-            .map((edge) => ({
-              ...edge,
-              className: "focused-edge",
-              style: {
-                ...edge.style,
-                stroke: "#3b82f6",
-                strokeWidth: 2,
-                filter: "drop-shadow(0 0 6px rgba(59, 130, 246, 0.6))",
-                transition: "all 0.3s ease-in-out",
-              },
-            }))
+          eds.filter((edge) => 
+            relatedNodeIds.has(edge.source) && relatedNodeIds.has(edge.target)
+          )
         );
 
         // Smooth zoom to focused nodes
