@@ -440,31 +440,50 @@ export function MindMapEditor({
   const handleFocusMode = useCallback(
     (nodeId: string) => {
       if (focusedNodeId === nodeId) {
-        // Toggle off focus mode
+        // Toggle off focus mode - restore all nodes and edges from original data
         setFocusedNodeId(null);
-        // Reset all nodes opacity with transition
-        setNodes((nds) =>
-          nds.map((node) => ({
-            ...node,
-            style: {
-              ...node.style,
-              opacity: 1,
-              filter: "none",
-              transition: "all 0.3s ease-in-out",
+        
+        if (apiData) {
+          // Restore all nodes
+          const sourcePos = layoutDirection === "TB" || layoutDirection === "BT"
+            ? "bottom"
+            : "right";
+          const targetPos = layoutDirection === "TB" || layoutDirection === "BT"
+            ? "top"
+            : "left";
+            
+          const allFlowNodes: Node[] = apiData.nodes.map((node) => ({
+            id: node.id,
+            type: "custom",
+            position: { x: node.x_pos || 0, y: node.y_pos || 0 },
+            sourcePosition: sourcePos as any,
+            targetPosition: targetPos as any,
+            data: {
+              ...node,
+              label: node.title,
+              projectId,
             },
-          }))
-        );
-        setEdges((eds) =>
-          eds.map((edge) => ({
-            ...edge,
-            className: "", // Clear any focus classes
-            style: {
-              ...edge.style,
-              opacity: 1,
-              transition: "opacity 0.3s ease-in-out",
-            },
-          }))
-        );
+          }));
+          
+          setNodes(allFlowNodes);
+          
+          // Restore all edges
+          const allFlowEdges: Edge[] = apiData.links.map((link) => ({
+            id: `${link.source}-${link.target}`,
+            source: link.source,
+            target: link.target,
+            type: edgeType,
+            animated: false,
+            style: { stroke: "#94a3b8" },
+          }));
+          
+          setEdges(allFlowEdges);
+          
+          // Fit view to show all nodes
+          setTimeout(() => {
+            reactFlowInstance?.fitView({ duration: 800, padding: 0.1 });
+          }, 100);
+        }
       } else {
         // Enable focus mode for this node
         setFocusedNodeId(nodeId);
@@ -488,47 +507,61 @@ export function MindMapEditor({
           }
         };
 
-        // Get only direct children (first degree), not recursive
-        const focusedNode = nodes.find((n) => n.id === nodeId);
-        if (focusedNode?.data.children) {
-          focusedNode.data.children.forEach((childId: string) => {
-            relatedNodeIds.add(childId);
-          });
-        }
+        // Recursive function to get all descendants
+        const getDescendants = (nodeId: string) => {
+          const node = nodes.find((n) => n.id === nodeId);
+          if (node?.data.children) {
+            node.data.children.forEach((childId: string) => {
+              if (!relatedNodeIds.has(childId)) {
+                relatedNodeIds.add(childId);
+                getDescendants(childId); // Recursive call
+              }
+            });
+          }
+        };
 
-        // Get all ancestors recursively
+        // Get all ancestors and descendants recursively
         getAncestors(nodeId);
+        getDescendants(nodeId);
 
-        // Update node opacity with smooth transition
+        // Update viewport to show focused lineage only
+        reactFlowInstance?.fitView({
+          duration: 800,
+          padding: 0.1,
+          nodes: nodes.filter((n) => relatedNodeIds.has(n.id)),
+        });
+
+        // Filter nodes to show only related ones with enhanced styling
         setNodes((nds) =>
-          nds.map((node) => ({
-            ...node,
-            style: {
-              ...node.style,
-              opacity: relatedNodeIds.has(node.id) ? 1 : 0.2,
-              filter: relatedNodeIds.has(node.id) ? "none" : "blur(2px)",
-              transition: "all 0.3s ease-in-out",
-            },
-          }))
+          nds
+            .filter((node) => relatedNodeIds.has(node.id))
+            .map((node) => ({
+              ...node,
+              style: {
+                ...node.style,
+                filter: "drop-shadow(0 0 10px rgba(59, 130, 246, 0.5))",
+                transition: "all 0.3s ease-in-out",
+              },
+            }))
         );
 
-        // Update edge opacity and highlight all edges between related nodes
+        // Filter edges to show only those connecting related nodes with glow
         setEdges((eds) =>
-          eds.map((edge) => {
-            const isBetweenRelated =
-              relatedNodeIds.has(edge.source) &&
-              relatedNodeIds.has(edge.target);
-
-            return {
+          eds
+            .filter((edge) => 
+              relatedNodeIds.has(edge.source) && relatedNodeIds.has(edge.target)
+            )
+            .map((edge) => ({
               ...edge,
-              className: isBetweenRelated ? "focused-edge" : "",
+              className: "focused-edge",
               style: {
                 ...edge.style,
-                opacity: isBetweenRelated ? 1 : 0.1,
-                transition: "opacity 0.3s ease-in-out",
+                stroke: "#3b82f6",
+                strokeWidth: 2,
+                filter: "drop-shadow(0 0 6px rgba(59, 130, 246, 0.6))",
+                transition: "all 0.3s ease-in-out",
               },
-            };
-          })
+            }))
         );
 
         // Smooth zoom to focused nodes
@@ -541,7 +574,7 @@ export function MindMapEditor({
         }, 100); // Small delay to ensure styles are applied first
       }
     },
-    [focusedNodeId, nodes, setNodes, setEdges, reactFlowInstance]
+    [focusedNodeId, nodes, setNodes, setEdges, reactFlowInstance, apiData, layoutDirection, projectId, edgeType]
   );
 
   // Handle status trail highlighting
@@ -1717,7 +1750,7 @@ export function MindMapEditor({
           />
         </div>
       )}
-      <div className="absolute inset-0">
+      <div className={`absolute inset-0 transition-all duration-300 ${focusedNodeId ? 'ring-4 ring-blue-500 ring-opacity-60 shadow-2xl shadow-blue-500/30 bg-blue-50/10 backdrop-blur-[0.5px]' : ''}`}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1795,6 +1828,16 @@ export function MindMapEditor({
           )}
         </ReactFlow>
       </div>
+
+      {/* Focus Mode Indicator */}
+      {focusedNodeId && (
+        <div className="absolute top-4 right-4 z-50">
+          <div className="bg-blue-500/90 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm flex items-center gap-2">
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+            Focus Mode Active (ESC to exit)
+          </div>
+        </div>
+      )}
 
       {contextMenu && (
         <NodeContextMenu
