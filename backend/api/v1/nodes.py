@@ -3,6 +3,7 @@ from typing import List
 from uuid import UUID
 from neo4j import AsyncSession
 from pydantic import BaseModel
+from urllib.parse import unquote
 
 from schemas.node import Node, NodeCreate, NodeUpdate, Command, CommandCreate, CommandUpdate, BulkNodePositionUpdate
 from crud import node as node_crud
@@ -190,7 +191,7 @@ async def bulk_delete_nodes(
     return
 
 # Endpoints for Tags within a Node, now on its own router
-@node_tags_router.post("/{node_id}/tags/{tag_name}", response_model=Node, status_code=status.HTTP_201_CREATED)
+@node_tags_router.post("/{node_id}/tags/{tag_name:path}", response_model=Node, status_code=status.HTTP_201_CREATED)
 async def add_tag_to_node(
     project_id: UUID,
     node_id: UUID,
@@ -198,14 +199,15 @@ async def add_tag_to_node(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    decoded_tag_name = unquote(tag_name)
     success = await node_crud.add_tag_to_node(
-        session, tag_name=tag_name, node_id=node_id, project_id=project_id, owner_id=current_user.id
+        session, tag_name=decoded_tag_name, node_id=node_id, project_id=project_id, owner_id=current_user.id
     )
     if not success:
         raise HTTPException(status_code=404, detail="Node not found.")
     return await node_crud.get_node_details(session, node_id, project_id, current_user.id)
 
-@node_tags_router.delete("/{node_id}/tags/{tag_name}", response_model=Node)
+@node_tags_router.delete("/{node_id}/tags/{tag_name:path}", response_model=Node)
 async def remove_tag_from_node(
     project_id: UUID,
     node_id: UUID,
@@ -213,8 +215,9 @@ async def remove_tag_from_node(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    decoded_tag_name = unquote(tag_name)
     success = await node_crud.remove_tag_from_node(
-        session, tag_name=tag_name, node_id=node_id, project_id=project_id, owner_id=current_user.id
+        session, tag_name=decoded_tag_name, node_id=node_id, project_id=project_id, owner_id=current_user.id
     )
     if not success:
         raise HTTPException(status_code=404, detail="Tag not found on this node.")

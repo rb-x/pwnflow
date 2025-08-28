@@ -279,8 +279,9 @@ export function useAddTag() {
       nodeId: string;
       tagName: string;
     }) => {
+      const encodedTagName = encodeURIComponent(tagName);
       const response = await api.post<NodeType>(
-        `/projects/${projectId}/nodes/${nodeId}/tags/${tagName}`
+        `/projects/${projectId}/nodes/${nodeId}/tags/${encodedTagName}`
       );
       return response.data;
     },
@@ -325,8 +326,9 @@ export function useRemoveTag() {
       nodeId: string;
       tagName: string;
     }) => {
+      const encodedTagName = encodeURIComponent(tagName);
       const response = await api.delete<NodeType>(
-        `/projects/${projectId}/nodes/${nodeId}/tags/${tagName}`
+        `/projects/${projectId}/nodes/${nodeId}/tags/${encodedTagName}`
       );
       return response.data;
     },
