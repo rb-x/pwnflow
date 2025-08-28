@@ -178,6 +178,18 @@ export function NodeDetailsDrawer({
   const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
   const shouldMaintainFocusRef = useRef(false);
   const isEditingRef = useRef(false);
+  const prevSelectedNodeIdRef = useRef<string | null>();
+
+  // Reset editing states when the drawer is closed to discard unsaved changes
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      setEditingTitle(false);
+      setEditingDescription(false);
+      setEditingFindings(false);
+      setPreviewDescription(true);
+      setPreviewFindings(true);
+    }
+  }, [isDrawerOpen]);
 
   // Get active variables from contexts
   const activeVariables = useMemo(() => {
@@ -281,23 +293,22 @@ export function NodeDetailsDrawer({
 
   // Initialize local state when node changes
   useEffect(() => {
+    const hasNodeChanged = selectedNodeId !== prevSelectedNodeIdRef.current;
     if (node) {
-      // Only update if it's a different node (ID changed)
-      if (node.id !== selectedNodeId) {
+      // If the selected node has changed, reset the entire local state for the drawer
+      if (hasNodeChanged) {
         setLocalTitle(node.title || "");
         setLocalDescription(node.description || "");
         setLocalFindings(node.findings || "");
         // Reset editing states when switching nodes
         setEditingTitle(false);
-
         // Always start in preview mode by default
         setEditingDescription(false);
         setPreviewDescription(true);
-
         setEditingFindings(false);
         setPreviewFindings(true);
       } else {
-        // Same node, only update if not currently editing
+        // Same node, only update if not currently editing to avoid overwriting user input
         if (!editingTitle) {
           setLocalTitle(node.title || "");
         }
@@ -309,6 +320,8 @@ export function NodeDetailsDrawer({
         }
       }
     }
+    // Update the ref to the current node ID for the next render
+    prevSelectedNodeIdRef.current = selectedNodeId;
   }, [node, selectedNodeId, editingTitle, editingDescription, editingFindings]); // Re-run when node object changes
 
   // Focus input when editing starts
