@@ -39,6 +39,11 @@ class ImportService:
             old_id = variable["id"]
             uuid_map[old_id] = str(uuid.uuid4())
         
+        # Generate new UUIDs for findings
+        for finding in data.get("findings", []):
+            old_id = finding["id"]
+            uuid_map[old_id] = str(uuid.uuid4())
+        
         return uuid_map
 
     def rewrite_uuids(self, data: Dict[str, Any], uuid_map: Dict[str, str]) -> Dict[str, Any]:
@@ -73,6 +78,12 @@ class ImportService:
             variable["id"] = uuid_map[variable["id"]]
             if variable.get("context_id") and variable["context_id"] in uuid_map:
                 variable["context_id"] = uuid_map[variable["context_id"]]
+        
+        # Rewrite finding IDs and node references
+        for finding in data.get("findings", []):
+            finding["id"] = uuid_map[finding["id"]]
+            if finding.get("node_id") and finding["node_id"] in uuid_map:
+                finding["node_id"] = uuid_map[finding["node_id"]]
         
         return data
 

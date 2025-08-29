@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 
 # --- Command Schemas ---
@@ -34,7 +34,6 @@ class NodeBase(BaseModel):
     title: str
     description: Optional[str] = None
     status: str = Field(NodeStatus.NOT_STARTED, description="The status of the node.")
-    findings: Optional[str] = None
     x_pos: float = 0.0
     y_pos: float = 0.0
 
@@ -45,7 +44,6 @@ class NodeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
-    findings: Optional[str] = None
     x_pos: Optional[float] = None
     y_pos: Optional[float] = None
 
@@ -53,6 +51,7 @@ class Node(NodeBase):
     id: UUID
     tags: List[str] = []
     commands: List[Command] = []
+    finding: Optional[Any] = None  # Use Any to avoid circular import, will be validated at runtime
     parents: List[UUID] = []
     children: List[UUID] = []
     created_at: Optional[datetime] = None

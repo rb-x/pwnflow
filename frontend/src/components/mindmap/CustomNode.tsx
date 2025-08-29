@@ -164,6 +164,7 @@ export const CustomNode = memo(
       data.description && data.description.trim().length > 0;
     const hasCommands = commands && commands.length > 0; // Use live command data
     const hasContent = hasFindings || hasDescription || hasCommands;
+    
 
     return (
       <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>

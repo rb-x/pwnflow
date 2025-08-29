@@ -23,25 +23,21 @@ export interface Finding {
 export const findingsApi = {
   // Create a finding for a node
   createFinding: (projectId: string, nodeId: string, data: FindingCreate) =>
-    apiClient.post<Finding>(`/projects/${projectId}/nodes/${nodeId}/finding`, data),
+    apiClient.post<Finding>(`/projects/${projectId}/nodes/${nodeId}/finding`, data).then(res => res.data),
 
   // Get finding for a node
   getNodeFinding: (projectId: string, nodeId: string) =>
-    apiClient.get<Finding>(`/projects/${projectId}/nodes/${nodeId}/finding`),
+    apiClient.get<Finding>(`/projects/${projectId}/nodes/${nodeId}/finding`).then(res => res.data),
 
-  // Get finding by ID
-  getFinding: (projectId: string, findingId: string) =>
-    apiClient.get<Finding>(`/projects/${projectId}/findings/${findingId}`),
+  // Update finding for a node
+  updateNodeFinding: (projectId: string, nodeId: string, data: FindingUpdate) =>
+    apiClient.put<Finding>(`/projects/${projectId}/nodes/${nodeId}/finding`, data).then(res => res.data),
 
-  // Update finding
-  updateFinding: (projectId: string, findingId: string, data: FindingUpdate) =>
-    apiClient.put<Finding>(`/projects/${projectId}/findings/${findingId}`, data),
-
-  // Delete finding
-  deleteFinding: (projectId: string, findingId: string) =>
-    apiClient.delete(`/projects/${projectId}/findings/${findingId}`),
+  // Delete finding for a node
+  deleteNodeFinding: (projectId: string, nodeId: string) =>
+    apiClient.delete(`/projects/${projectId}/nodes/${nodeId}/finding`).then(res => res.data),
 
   // Get project timeline
   getProjectTimeline: (projectId: string) =>
-    apiClient.get<Array<any>>(`/projects/${projectId}/timeline`),
+    apiClient.get<Array<any>>(`/projects/${projectId}/timeline`).then(res => res.data),
 };

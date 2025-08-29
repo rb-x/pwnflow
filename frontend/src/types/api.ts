@@ -57,12 +57,33 @@ export interface ProjectUpdate {
   layout_direction?: "TB" | "BT" | "LR" | "RL";
 }
 
+// Findings
+export interface Finding {
+  id: string;
+  content: string;
+  date: string;
+  node_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FindingCreate {
+  content: string;
+  date?: string;
+}
+
+export interface FindingUpdate {
+  content?: string;
+  date?: string;
+}
+
 // Nodes
 export interface Node {
   title: string;
   description: string | null;
   status: string;
-  findings: string | null;
+  finding: Finding | null;
   x_pos: number;
   y_pos: number;
   id: string;
@@ -78,7 +99,6 @@ export interface NodeCreate {
   title: string;
   description?: string | null;
   status?: string;
-  findings?: string | null;
   x_pos?: number;
   y_pos?: number;
 }
@@ -87,7 +107,6 @@ export interface NodeUpdate {
   title?: string | null;
   description?: string | null;
   status?: string | null;
-  findings?: string | null;
   x_pos?: number | null;
   y_pos?: number | null;
 }

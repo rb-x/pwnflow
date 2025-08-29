@@ -13,6 +13,7 @@ from schemas.export import (
     ProjectExportRequest, ExportJobResponse, ImportPreviewResponse
 )
 from crud import project as project_crud
+from crud import finding as finding_crud
 from api.dependencies import get_current_user, get_session
 from schemas.user import User
 from services.export_service import ExportService
@@ -350,6 +351,20 @@ async def import_project(
         # Clean up temp file
         os.unlink(tmp_path)
 
+@project_crud_router.get("/{project_id}/timeline", response_model=List[dict])
+async def get_project_timeline(
+    project_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get chronological timeline of all findings in a project"""
+    timeline = await finding_crud.get_project_timeline(
+        session, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    return timeline
 
 # Include all the specific routers into the main router for this file
 router.include_router(project_crud_router, prefix="")

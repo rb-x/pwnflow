@@ -121,6 +121,7 @@ class ExportService:
                 "contexts": project_data["contexts"],
                 "variables": project_data["variables"] if include_variables else [],
                 "commands": project_data["commands"],
+                "findings": project_data["findings"],
                 "tags": project_data["tags"]
             }
 

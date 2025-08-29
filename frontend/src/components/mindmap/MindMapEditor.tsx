@@ -1124,7 +1124,7 @@ export function MindMapEditor({
         };
 
         setNodes((nds) => [...nds, newFlowNode]);
-        toast.success("Node duplicated with all commands and findings");
+        toast.success("Node duplicated");
       } catch (error) {
         toast.error("Failed to duplicate node");
       }

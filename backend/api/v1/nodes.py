@@ -6,7 +6,9 @@ from pydantic import BaseModel
 from urllib.parse import unquote
 
 from schemas.node import Node, NodeCreate, NodeUpdate, Command, CommandCreate, CommandUpdate, BulkNodePositionUpdate
+from schemas.finding import Finding, FindingCreate, FindingUpdate
 from crud import node as node_crud
+from crud import finding as finding_crud
 from api.dependencies import get_current_user, get_session
 from schemas.user import User
 from services.ws_notifications import notification_manager
@@ -18,6 +20,7 @@ router = APIRouter()
 nodes_crud_router = APIRouter(tags=["Nodes"])
 node_tags_router = APIRouter(tags=["Node Tags"])
 node_commands_router = APIRouter(tags=["Node Commands"])
+node_findings_router = APIRouter(tags=["Node Findings"])
 node_links_router = APIRouter(tags=["Node Links"])
 
 from typing import List, Dict
@@ -376,8 +379,132 @@ async def unlink_nodes(
     
     return 
 
+# Endpoints for Findings within a Node
+@node_findings_router.get("/{node_id}/finding", response_model=Finding)
+async def get_node_finding(
+    project_id: UUID,
+    node_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the finding for a specific node"""
+    finding = await finding_crud.get_finding_for_node(
+        session, 
+        node_id=node_id, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    if not finding:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    
+    return finding
+
+@node_findings_router.post("/{node_id}/finding", response_model=Finding, status_code=status.HTTP_201_CREATED)
+async def create_finding(
+    project_id: UUID,
+    node_id: UUID,
+    finding_in: FindingCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a finding for a specific node"""
+    finding = await finding_crud.create_finding_for_node(
+        session, 
+        finding_in=finding_in, 
+        node_id=node_id, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    if not finding:
+        raise HTTPException(status_code=404, detail="Node not found or you don't have access")
+    
+    # Send WebSocket notification
+    await notification_manager.notify_project(str(project_id), "finding_created", {
+        "finding": finding.model_dump(),
+        "node_id": str(node_id)
+    })
+    
+    return finding
+
+@node_findings_router.put("/{node_id}/finding", response_model=Finding)
+async def update_node_finding(
+    project_id: UUID,
+    node_id: UUID,
+    finding_in: FindingUpdate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Update the finding for a specific node"""
+    # Get the existing finding first
+    existing_finding = await finding_crud.get_finding_for_node(
+        session, 
+        node_id=node_id, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    if not existing_finding:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    
+    updated_finding = await finding_crud.update_finding(
+        session, 
+        finding_id=existing_finding.id, 
+        finding_in=finding_in, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    if not updated_finding:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    
+    # Send WebSocket notification
+    await notification_manager.notify_project(str(project_id), "finding_updated", {
+        "finding": updated_finding.model_dump()
+    })
+    
+    return updated_finding
+
+@node_findings_router.delete("/{node_id}/finding", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_node_finding(
+    project_id: UUID,
+    node_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete the finding for a specific node"""
+    # Get the existing finding first
+    existing_finding = await finding_crud.get_finding_for_node(
+        session, 
+        node_id=node_id, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    if not existing_finding:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    
+    success = await finding_crud.delete_finding(
+        session, 
+        finding_id=existing_finding.id, 
+        project_id=project_id, 
+        owner_id=current_user.id
+    )
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    
+    # Send WebSocket notification
+    await notification_manager.notify_project(str(project_id), "finding_deleted", {
+        "finding_id": str(existing_finding.id)
+    })
+    
+    return
+
 # Include all the specific routers into the main router
 router.include_router(nodes_crud_router, prefix="")
 router.include_router(node_tags_router, prefix="")
 router.include_router(node_commands_router, prefix="")
+router.include_router(node_findings_router, prefix="")
 router.include_router(node_links_router, prefix="") 

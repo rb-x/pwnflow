@@ -21,16 +21,19 @@ async def get_all_nodes_for_project(
     MATCH (user:User {id: $owner_id})-[:OWNS]->(project:Project {id: $project_id})-[:HAS_NODE]->(node:Node)
     // Collect tags
     OPTIONAL MATCH (node)-[:HAS_TAG]->(tag:Tag)
-    WITH node, collect(tag.name) as tags
+    WITH user, node, collect(tag.name) as tags
     // Collect commands
     OPTIONAL MATCH (node)-[:HAS_COMMAND]->(command:Command)
-    WITH node, tags, collect(command) as commands
+    WITH user, node, tags, collect(command) as commands
+    // Collect finding
+    OPTIONAL MATCH (node)-[:HAS_FINDING]->(finding:Finding)
+    WITH user, node, tags, commands, finding
     // Collect parent nodes
     OPTIONAL MATCH (parent:Node)-[:IS_LINKED_TO]->(node)
-    WITH node, tags, commands, collect(parent.id) as parents
+    WITH user, node, tags, commands, finding, collect(parent.id) as parents
     // Collect child nodes
     OPTIONAL MATCH (node)-[:IS_LINKED_TO]->(child:Node)
-    WITH node, tags, commands, parents, collect(child.id) as children
+    WITH user, node, tags, commands, finding, parents, collect(child.id) as children
     RETURN node, tags, 
            [cmd IN commands | {
                id: cmd.id,
@@ -38,6 +41,15 @@ async def get_all_nodes_for_project(
                command: cmd.command,
                description: cmd.description
            }] as commands,
+           CASE WHEN finding IS NOT NULL THEN {
+               id: finding.id,
+               content: finding.content,
+               date: finding.date,
+               created_at: finding.created_at,
+               updated_at: finding.updated_at,
+               created_by: user.id,
+               node_id: node.id
+           } ELSE null END as finding,
            parents,
            children
     ORDER BY node.y_pos, node.x_pos
@@ -54,6 +66,7 @@ async def get_all_nodes_for_project(
         node_data = dict(record["node"])
         node_data["tags"] = record["tags"]
         node_data["commands"] = record["commands"]
+        node_data["finding"] = record["finding"]
         node_data["parents"] = record["parents"]
         node_data["children"] = record["children"]
         node_data["project_id"] = str(project_id)
@@ -64,9 +77,15 @@ async def get_all_nodes_for_project(
         if "updated_at" in node_data:
             node_data["updated_at"] = convert_neo4j_datetime(node_data["updated_at"])
         
-        # Fix findings field if it's a list (convert to empty string)
-        if "findings" in node_data and isinstance(node_data["findings"], list):
-            node_data["findings"] = ""
+        # Process finding datetime conversion if finding exists
+        if node_data["finding"]:
+            node_data["finding"]["date"] = convert_neo4j_datetime(node_data["finding"]["date"])
+            node_data["finding"]["created_at"] = convert_neo4j_datetime(node_data["finding"]["created_at"])
+            node_data["finding"]["updated_at"] = convert_neo4j_datetime(node_data["finding"]["updated_at"])
+        
+        # Remove old findings field if it exists (we now use finding object)
+        if "findings" in node_data:
+            del node_data["findings"]
             
         nodes.append(Node(**node_data))
     return nodes
@@ -109,17 +128,37 @@ async def get_node_details(
     MATCH (user:User {id: $owner_id})-[:OWNS]->(project:Project {id: $project_id})-[:HAS_NODE]->(node:Node {id: $node_id})
     // Collect tags
     OPTIONAL MATCH (node)-[:HAS_TAG]->(tag:Tag)
-    WITH node, collect(tag.name) as tags
+    WITH user, node, collect(tag.name) as tags
     // Collect commands
     OPTIONAL MATCH (node)-[:HAS_COMMAND]->(command:Command)
-    WITH node, tags, collect(command) as commands
+    WITH user, node, tags, collect(command) as commands
+    // Collect finding
+    OPTIONAL MATCH (node)-[:HAS_FINDING]->(finding:Finding)
+    WITH user, node, tags, commands, finding
     // Collect parents
     OPTIONAL MATCH (parent)-[:IS_LINKED_TO]->(node)
-    WITH node, tags, commands, collect(parent.id) as parents
+    WITH user, node, tags, commands, finding, collect(parent.id) as parents
     // Collect children
     OPTIONAL MATCH (node)-[:IS_LINKED_TO]->(child)
-    WITH node, tags, commands, parents, collect(child.id) as children
-    RETURN node, tags, commands, parents, children
+    WITH user, node, tags, commands, finding, parents, collect(child.id) as children
+    RETURN node, tags, 
+           [cmd IN commands | {
+               id: cmd.id,
+               title: cmd.title,
+               command: cmd.command,
+               description: cmd.description
+           }] as commands,
+           CASE WHEN finding IS NOT NULL THEN {
+               id: finding.id,
+               content: finding.content,
+               date: finding.date,
+               created_at: finding.created_at,
+               updated_at: finding.updated_at,
+               created_by: user.id,
+               node_id: node.id
+           } ELSE null END as finding,
+           parents,
+           children
     """
     result = await session.run(
         query,
@@ -132,6 +171,7 @@ async def get_node_details(
     node_data = dict(record["node"])
     node_data["tags"] = record["tags"]
     node_data["commands"] = [Command.model_validate(c) for c in record["commands"]]
+    node_data["finding"] = record["finding"]
     node_data["parents"] = record["parents"]
     node_data["children"] = record["children"]
     
@@ -140,6 +180,12 @@ async def get_node_details(
         node_data["created_at"] = convert_neo4j_datetime(node_data["created_at"])
     if "updated_at" in node_data:
         node_data["updated_at"] = convert_neo4j_datetime(node_data["updated_at"])
+    
+    # Process finding datetime conversion if finding exists
+    if node_data["finding"]:
+        node_data["finding"]["date"] = convert_neo4j_datetime(node_data["finding"]["date"])
+        node_data["finding"]["created_at"] = convert_neo4j_datetime(node_data["finding"]["created_at"])
+        node_data["finding"]["updated_at"] = convert_neo4j_datetime(node_data["finding"]["updated_at"])
     
     # Fix findings field if it's a list (convert to empty string)
     if "findings" in node_data and isinstance(node_data["findings"], list):

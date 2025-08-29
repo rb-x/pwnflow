@@ -3,11 +3,27 @@ import * as FindingsAPI from '@/services/api/findings';
 import { nodeKeys } from '@/hooks/api/useNodes';
 import { toast } from 'sonner';
 
+// Import the NodesWithLinks interface from useNodes
+interface NodesWithLinks {
+  nodes: any[];
+  links: any[];
+}
+
 // Get finding for a specific node
 export const useNodeFinding = (projectId: string, nodeId: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['finding', projectId, nodeId],
-    queryFn: () => FindingsAPI.findingsApi.getNodeFinding(projectId, nodeId),
+    queryFn: async () => {
+      try {
+        return await FindingsAPI.findingsApi.getNodeFinding(projectId, nodeId);
+      } catch (error: any) {
+        // If finding doesn't exist (404), return null instead of throwing
+        if (error.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
     enabled: !!projectId && !!nodeId && (options?.enabled !== false),
   });
 };
@@ -22,8 +38,22 @@ export const useCreateFinding = () => {
     onSuccess: (finding, { projectId, nodeId }) => {
       // Update the finding query
       queryClient.setQueryData(['finding', projectId, nodeId], finding);
-      // Invalidate nodes query to update the UI
-      queryClient.invalidateQueries({ queryKey: nodeKeys.list(projectId) });
+      // Also invalidate the query to refetch from server
+      queryClient.invalidateQueries({ queryKey: ['finding', projectId, nodeId] });
+      
+      // Update the node data directly in the cache to include the finding
+      queryClient.setQueryData<NodesWithLinks>(nodeKeys.list(projectId), (oldData) => {
+        if (!oldData) return oldData;
+        
+        const updatedNodes = oldData.nodes.map((node: any) => 
+          node.id === nodeId ? { ...node, finding } : node
+        );
+        
+        return { ...oldData, nodes: updatedNodes };
+      });
+      
+      // Force refetch nodes query to update the UI with finding data
+      queryClient.refetchQueries({ queryKey: nodeKeys.list(projectId) });
       // Invalidate timeline
       queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
       toast.success('Finding created successfully');
@@ -39,13 +69,25 @@ export const useUpdateFinding = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ projectId, findingId, data }: { projectId: string; findingId: string; data: FindingsAPI.FindingUpdate }) =>
-      FindingsAPI.findingsApi.updateFinding(projectId, findingId, data),
-    onSuccess: (finding, { projectId }) => {
+    mutationFn: ({ projectId, nodeId, data }: { projectId: string; nodeId: string; data: FindingsAPI.FindingUpdate }) =>
+      FindingsAPI.findingsApi.updateNodeFinding(projectId, nodeId, data),
+    onSuccess: (finding, { projectId, nodeId }) => {
       // Update the finding query
-      queryClient.setQueryData(['finding', projectId, finding.node_id], finding);
-      // Invalidate nodes query to update the UI
-      queryClient.invalidateQueries({ queryKey: nodeKeys.list(projectId) });
+      queryClient.setQueryData(['finding', projectId, nodeId], finding);
+      
+      // Update the node data directly in the cache to include the updated finding
+      queryClient.setQueryData<NodesWithLinks>(nodeKeys.list(projectId), (oldData) => {
+        if (!oldData) return oldData;
+        
+        const updatedNodes = oldData.nodes.map((node: any) => 
+          node.id === nodeId ? { ...node, finding } : node
+        );
+        
+        return { ...oldData, nodes: updatedNodes };
+      });
+      
+      // Force refetch nodes query to update the UI with finding data
+      queryClient.refetchQueries({ queryKey: nodeKeys.list(projectId) });
       // Invalidate timeline
       queryClient.invalidateQueries({ queryKey: ['timeline', projectId] });
       toast.success('Finding updated successfully');
@@ -61,11 +103,23 @@ export const useDeleteFinding = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ projectId, findingId, nodeId }: { projectId: string; findingId: string; nodeId: string }) =>
-      FindingsAPI.findingsApi.deleteFinding(projectId, findingId),
+    mutationFn: ({ projectId, nodeId }: { projectId: string; nodeId: string }) =>
+      FindingsAPI.findingsApi.deleteNodeFinding(projectId, nodeId),
     onSuccess: (_, { projectId, nodeId }) => {
       // Remove the finding from cache
       queryClient.setQueryData(['finding', projectId, nodeId], null);
+      
+      // Update the node data directly in the cache to remove the finding
+      queryClient.setQueryData<NodesWithLinks>(nodeKeys.list(projectId), (oldData) => {
+        if (!oldData) return oldData;
+        
+        const updatedNodes = oldData.nodes.map((node: any) => 
+          node.id === nodeId ? { ...node, finding: null } : node
+        );
+        
+        return { ...oldData, nodes: updatedNodes };
+      });
+      
       // Invalidate nodes query to update the UI
       queryClient.invalidateQueries({ queryKey: nodeKeys.list(projectId) });
       // Invalidate timeline
