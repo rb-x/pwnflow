@@ -141,6 +141,40 @@ export function useUpdateNode() {
   });
 }
 
+// Duplicate node
+export function useDuplicateNode() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      nodeId,
+    }: {
+      projectId: string;
+      nodeId: string;
+    }) => {
+      const response = await nodesApi.duplicate(projectId, nodeId);
+      return response.data;
+    },
+    onSuccess: (duplicatedNode, { projectId }) => {
+      // Update the cache to include the new duplicated node
+      queryClient.setQueryData<NodesWithLinks>(
+        nodeKeys.list(projectId),
+        (old) => {
+          if (!old) return { nodes: [duplicatedNode], links: [] };
+          return {
+            ...old,
+            nodes: [...old.nodes, duplicatedNode],
+          };
+        }
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to duplicate node:", error);
+    },
+  });
+}
+
 // Delete node
 export function useDeleteNode() {
   const queryClient = useQueryClient();

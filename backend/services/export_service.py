@@ -14,6 +14,14 @@ import uuid
 from db.database import get_driver
 from schemas.user import User
 from schemas.export import EncryptionMethod
+from neo4j.time import DateTime as Neo4jDateTime
+
+def convert_neo4j_datetime(dt):
+    """Convert Neo4j DateTime to Python datetime"""
+    if isinstance(dt, Neo4jDateTime):
+        return dt.to_native()
+    return dt
+
 
 
 class ExportService:
@@ -136,6 +144,7 @@ class ExportService:
                         "contexts": export_data["contexts"],
                         "variables": export_data["variables"],
                         "commands": export_data["commands"],
+                        "findings": export_data["findings"],
                         "tags": export_data["tags"]
                     }).encode()
                     
@@ -189,6 +198,36 @@ class ExportService:
                 node["updated_at"] = node["updated_at"].isoformat()
             node["tags"] = record["tags"]
             nodes.append(node)
+        
+        # Fetch findings
+        findings_result = await session.run("""
+            MATCH (u:User {id: $user_id})-[:OWNS]->(p:Project {id: $project_id})
+            MATCH (p)-[:HAS_NODE]->(n:Node)-[:HAS_FINDING]->(f:Finding)
+            RETURN f, n.id as node_id, u.id as created_by
+        """, user_id=user_id, project_id=project_id)
+        
+        findings = []
+        try:
+            async for record in findings_result:
+                finding = dict(record["f"])
+                
+                # Convert DateTime objects to ISO strings (same as CRUD layer)
+                try:
+                    if "date" in finding and finding["date"]:
+                        finding["date"] = convert_neo4j_datetime(finding["date"]).isoformat()
+                    if "created_at" in finding and finding["created_at"]:
+                        finding["created_at"] = convert_neo4j_datetime(finding["created_at"]).isoformat()
+                    if "updated_at" in finding and finding["updated_at"]:
+                        finding["updated_at"] = convert_neo4j_datetime(finding["updated_at"]).isoformat()
+                    
+                    finding["node_id"] = record["node_id"]
+                    finding["created_by"] = record["created_by"]
+                    findings.append(finding)
+                    
+                except Exception as e:
+                    continue
+        except Exception as e:
+            findings = []
         
         # Fetch relationships
         relationships_result = await session.run("""
@@ -277,6 +316,7 @@ class ExportService:
             "contexts": contexts,
             "variables": variables,
             "commands": commands,
+            "findings": findings,
             "tags": tags
         }
 

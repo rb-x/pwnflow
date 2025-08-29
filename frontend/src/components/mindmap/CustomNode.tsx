@@ -159,7 +159,7 @@ export const CustomNode = memo(
     }, [hideTimeout]);
 
     // Check if node has content
-    const hasFindings = data.findings && data.findings.trim().length > 0;
+    const hasFindings = data.finding && data.finding.content && data.finding.content.trim().length > 0;
     const hasDescription =
       data.description && data.description.trim().length > 0;
     const hasCommands = commands && commands.length > 0; // Use live command data

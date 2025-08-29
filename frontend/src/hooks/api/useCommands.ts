@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { commandsService } from "@/services/api/commands";
+import { nodeKeys } from "@/hooks/api/useNodes";
 import type { Command, CommandCreate, CommandUpdate } from "@/types/api";
 import { toast } from "sonner";
 
@@ -55,7 +56,7 @@ export function useCreateCommand() {
       });
       // Also invalidate the node query to update the commands array
       queryClient.invalidateQueries({
-        queryKey: ["nodes", "project", projectId],
+        queryKey: nodeKeys.list(projectId),
       });
       toast.success("Command created successfully");
     },
@@ -122,7 +123,7 @@ export function useDeleteCommand() {
       });
       // Also invalidate the node query to update the commands array
       queryClient.invalidateQueries({
-        queryKey: ["nodes", "project", projectId],
+        queryKey: nodeKeys.list(projectId),
       });
       toast.success("Command deleted successfully");
     },

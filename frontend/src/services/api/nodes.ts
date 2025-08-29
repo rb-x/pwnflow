@@ -31,6 +31,10 @@ export const nodesApi = {
   delete: (projectId: string, nodeId: string) =>
     apiClient.delete(`/projects/${projectId}/nodes/${nodeId}`),
 
+  // Duplicate a node
+  duplicate: (projectId: string, nodeId: string) =>
+    apiClient.post<Node>(`/projects/${projectId}/nodes/${nodeId}/duplicate`),
+
   // Link nodes
   linkNodes: (projectId: string, sourceId: string, targetId: string) =>
     apiClient.post(`/projects/${projectId}/nodes/${sourceId}/link/${targetId}`),

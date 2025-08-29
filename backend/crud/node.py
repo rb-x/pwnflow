@@ -368,6 +368,92 @@ async def unlink_nodes(
     # Check if a relationship was actually deleted
     return summary.counters.relationships_deleted > 0
 
+async def duplicate_node(
+    session: AsyncSession, 
+    node_id: UUID, 
+    project_id: UUID, 
+    owner_id: UUID,
+    x_offset: int = 50,
+    y_offset: int = 50
+) -> Node | None:
+    """Duplicate a node with all its commands and findings"""
+    
+    # First get the original node
+    original_node = await get_node_details(session, node_id, project_id, owner_id)
+    if not original_node:
+        return None
+    
+    # Create the duplicated node
+    query = """
+    MATCH (user:User {id: $owner_id})-[:OWNS]->(project:Project {id: $project_id})-[:HAS_NODE]->(original:Node {id: $node_id})
+    CREATE (project)-[:HAS_NODE]->(duplicate:Node {
+        id: randomUUID(),
+        title: $title,
+        description: original.description,
+        status: original.status,
+        color: original.color,
+        x_pos: original.x_pos + $x_offset,
+        y_pos: original.y_pos + $y_offset,
+        created_at: datetime(),
+        updated_at: datetime()
+    })
+    
+    // Copy tags
+    WITH duplicate, original
+    OPTIONAL MATCH (original)-[:HAS_TAG]->(tag:Tag)
+    FOREACH (t IN CASE WHEN tag IS NOT NULL THEN [tag] ELSE [] END |
+        CREATE (duplicate)-[:HAS_TAG]->(t)
+    )
+    
+    // Copy commands
+    WITH duplicate, original
+    OPTIONAL MATCH (original)-[:HAS_COMMAND]->(cmd:Command)
+    FOREACH (c IN CASE WHEN cmd IS NOT NULL THEN [cmd] ELSE [] END |
+        CREATE (duplicate)-[:HAS_COMMAND]->(newCmd:Command {
+            id: randomUUID(),
+            title: c.title,
+            command: c.command,
+            description: c.description,
+            created_at: datetime(),
+            updated_at: datetime()
+        })
+    )
+    
+    // Copy finding
+    WITH duplicate, original
+    OPTIONAL MATCH (original)-[:HAS_FINDING]->(finding:Finding)
+    FOREACH (f IN CASE WHEN finding IS NOT NULL THEN [finding] ELSE [] END |
+        CREATE (duplicate)-[:HAS_FINDING]->(newFinding:Finding {
+            id: randomUUID(),
+            content: f.content,
+            date: f.date,
+            created_at: datetime(),
+            updated_at: datetime()
+        })
+    )
+    
+    RETURN duplicate
+    """
+    
+    result = await session.run(
+        query,
+        {
+            "owner_id": str(owner_id),
+            "project_id": str(project_id),
+            "node_id": str(node_id),
+            "title": f"{original_node.title} (Copy)",
+            "x_offset": x_offset,
+            "y_offset": y_offset,
+        }
+    )
+    
+    record = await result.single()
+    if not record:
+        return None
+    
+    # Return the duplicated node with all its details
+    return await get_node_details(session, record["duplicate"]["id"], project_id, owner_id)
+
 async def bulk_update_node_positions(
     session: AsyncSession,
     project_id: UUID,

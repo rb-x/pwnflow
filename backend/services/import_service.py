@@ -186,7 +186,6 @@ class ImportService:
         target_project_id: Optional[str] = None
     ) -> str:
         """Import a project from file."""
-        print(f"Import project called with password: {'***' if password else 'None'}")
         try:
             with zipfile.ZipFile(file_path, 'r') as zf:
                 # Read metadata
@@ -355,6 +354,61 @@ class ImportService:
                         command=command.get("command", ""),
                         description=command.get("description", "")
                     )
+            
+            # Create Finding entities and link to nodes
+            findings_to_import = data.get("findings", [])
+            
+            for finding in findings_to_import:
+                node_id = finding.get("node_id")
+                created_by_id = finding.get("created_by")
+                if node_id:
+                    # Convert ISO strings back to datetime objects
+                    from datetime import datetime
+                    
+                    date_val = finding.get("date", "")
+                    if isinstance(date_val, str) and date_val:
+                        try:
+                            date_val = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
+                        except:
+                            date_val = datetime.now()
+                    
+                    created_at_val = finding.get("created_at", "")
+                    if isinstance(created_at_val, str) and created_at_val:
+                        try:
+                            created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
+                        except:
+                            created_at_val = datetime.now()
+                    
+                    updated_at_val = finding.get("updated_at", "")
+                    if isinstance(updated_at_val, str) and updated_at_val:
+                        try:
+                            updated_at_val = datetime.fromisoformat(updated_at_val.replace('Z', '+00:00'))
+                        except:
+                            updated_at_val = datetime.now()
+                    
+                    # Create the finding
+                    result = await session.run("""
+                        MATCH (p:Project {id: $project_id})-[:HAS_NODE]->(n:Node {id: $node_id})
+                        CREATE (f:Finding {
+                            id: $finding_id,
+                            content: $content,
+                            date: datetime($date),
+                            created_at: datetime($created_at),
+                            updated_at: datetime($updated_at)
+                        })
+                        CREATE (n)-[:HAS_FINDING]->(f)
+                        RETURN f.id as created_finding_id
+                    """,
+                        project_id=project_id,
+                        node_id=node_id,
+                        finding_id=finding["id"],
+                        content=finding.get("content", ""),
+                        date=date_val.isoformat() if date_val else datetime.now().isoformat(),
+                        created_at=created_at_val.isoformat() if created_at_val else datetime.now().isoformat(),
+                        updated_at=updated_at_val.isoformat() if updated_at_val else datetime.now().isoformat()
+                    )
+                    
+                    finding_record = await result.single()
             
             # Create variables and link to contexts
             for variable in data.get("variables", []):

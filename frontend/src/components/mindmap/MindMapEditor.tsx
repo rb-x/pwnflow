@@ -53,6 +53,7 @@ import {
   useLinkNodes,
   useUnlinkNodes,
   useCreateNode,
+  useDuplicateNode,
 } from "@/hooks/api/useNodes";
 import { useUpdateProject } from "@/hooks/api/useProjects";
 import { useMindMapStore } from "@/store/mindMapStore";
@@ -280,6 +281,7 @@ export function MindMapEditor({
   const linkNodesMutation = useLinkNodes();
   const unlinkNodesMutation = useUnlinkNodes();
   const createNodeMutation = useCreateNode();
+  const duplicateNodeMutation = useDuplicateNode();
   const updateProjectMutation = useUpdateProject();
 
   // Toolbar functionality
@@ -1085,17 +1087,10 @@ export function MindMapEditor({
       if (!node) return;
 
       try {
-        // Create a duplicate node with offset position
-        const createdNode = await createNodeMutation.mutateAsync({
+        // Duplicate the node with all its commands and findings
+        const duplicatedNode = await duplicateNodeMutation.mutateAsync({
           projectId,
-          data: {
-            title: `${node.data.title} (Copy)`,
-            description: node.data.description || "",
-            status: node.data.status || "NOT_STARTED",
-            findings: node.data.findings || null,
-            x_pos: node.position.x + 50,
-            y_pos: node.position.y + 50,
-          },
+          nodeId,
         });
 
         // Add the duplicated node to the flow
@@ -1117,19 +1112,19 @@ export function MindMapEditor({
           : "bottom";
 
         const newFlowNode: Node = {
-          id: createdNode.id,
+          id: duplicatedNode.id,
           type: "custom",
           position: { x: node.position.x + 50, y: node.position.y + 50 },
           sourcePosition: sourcePos as any,
           targetPosition: targetPos as any,
           data: {
-            ...createdNode,
-            label: createdNode.title,
+            ...duplicatedNode,
+            label: duplicatedNode.title,
           },
         };
 
         setNodes((nds) => [...nds, newFlowNode]);
-        toast.success("Node duplicated");
+        toast.success("Node duplicated with all commands and findings");
       } catch (error) {
         toast.error("Failed to duplicate node");
       }
@@ -1138,9 +1133,9 @@ export function MindMapEditor({
     [
       reactFlowInstance,
       projectId,
-      createNodeMutation,
+      duplicateNodeMutation,
+      layoutDirection,
       setNodes,
-      setSelectedNodeId,
     ]
   );
 

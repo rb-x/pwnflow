@@ -496,5 +496,4 @@ async def import_template_to_project(
         return True
         
     except Exception as e:
-        print(f"Error importing template: {e}")
         return False

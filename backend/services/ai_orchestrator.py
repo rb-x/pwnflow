@@ -323,7 +323,7 @@ class AIOrchestrator:
                 })
             except Exception as e:
                 # Log the error but continue with other relationships
-                print(f"Failed to create relationship: {e}")
+                pass
         
         return created_relationships
     

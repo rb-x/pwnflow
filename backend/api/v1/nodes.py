@@ -75,6 +75,25 @@ async def create_node(
     
     return node
 
+@nodes_crud_router.post("/{node_id}/duplicate", response_model=Node, status_code=status.HTTP_201_CREATED)
+async def duplicate_node(
+    project_id: UUID,
+    node_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Duplicate a node with all its commands and findings"""
+    node = await node_crud.duplicate_node(
+        session, node_id=node_id, project_id=project_id, owner_id=current_user.id
+    )
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found.")
+    
+    # Send WebSocket notification
+    await notification_manager.notify_project(str(project_id), "nodes_changed")
+    
+    return node
+
 @nodes_crud_router.get("/{node_id}", response_model=Node)
 async def get_node(
     project_id: UUID,
