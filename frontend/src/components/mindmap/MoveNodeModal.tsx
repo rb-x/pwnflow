@@ -21,6 +21,13 @@ interface MoveNodeModalProps {
   onMove: (targetParentId: string | null) => void;
 }
 
+const truncateText = (text: string, maxLength = 60) => {
+  if (text.length <= maxLength) return text;
+
+  const slicePoint = Math.max(0, maxLength - 3);
+  return `${text.slice(0, slicePoint).trimEnd()}...`;
+};
+
 export function MoveNodeModal({
   isOpen,
   onClose,
@@ -56,16 +63,55 @@ export function MoveNodeModal({
     );
   }, [nodeToMove, nodes]);
 
-  // Filter nodes based on search query
+  // Filter and sort nodes based on search query
   const filteredNodes = useMemo(() => {
     if (!searchQuery) return availableTargets;
-    
+
     const query = searchQuery.toLowerCase();
-    return availableTargets.filter(
-      node => 
-        node.data.title.toLowerCase().includes(query) ||
-        node.data.description?.toLowerCase().includes(query)
-    );
+
+    // Filter nodes that match the query
+    const matchingNodes = availableTargets.filter(node => {
+      const titleMatch = node.data.title.toLowerCase().includes(query);
+      const descriptionMatch = node.data.description?.toLowerCase().includes(query) || false;
+      const idMatch = node.id.toLowerCase().includes(query);
+
+      return titleMatch || descriptionMatch || idMatch;
+    });
+
+    // Sort by relevance: ID exact match > title match > description match
+    return matchingNodes.sort((a, b) => {
+      const queryLower = query.toLowerCase();
+
+      // Check for exact ID matches first
+      const aIdExact = a.id.toLowerCase() === queryLower;
+      const bIdExact = b.id.toLowerCase() === queryLower;
+      if (aIdExact && !bIdExact) return -1;
+      if (!aIdExact && bIdExact) return 1;
+
+      // Then check for title matches (weighted higher)
+      const aTitleMatch = a.data.title.toLowerCase().includes(queryLower);
+      const bTitleMatch = b.data.title.toLowerCase().includes(queryLower);
+
+      // Check if title starts with query (even higher weight)
+      const aTitleStarts = a.data.title.toLowerCase().startsWith(queryLower);
+      const bTitleStarts = b.data.title.toLowerCase().startsWith(queryLower);
+
+      if (aTitleStarts && !bTitleStarts) return -1;
+      if (!aTitleStarts && bTitleStarts) return 1;
+
+      if (aTitleMatch && !bTitleMatch) return -1;
+      if (!aTitleMatch && bTitleMatch) return 1;
+
+      // Finally, check description matches
+      const aDescMatch = a.data.description?.toLowerCase().includes(queryLower) || false;
+      const bDescMatch = b.data.description?.toLowerCase().includes(queryLower) || false;
+
+      if (aDescMatch && !bDescMatch) return -1;
+      if (!aDescMatch && bDescMatch) return 1;
+
+      // If all else is equal, sort alphabetically by title
+      return a.data.title.localeCompare(b.data.title);
+    });
   }, [availableTargets, searchQuery]);
 
   const handleMove = (targetId: string | null) => {
@@ -78,14 +124,14 @@ export function MoveNodeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Move className="h-5 w-5" />
             Move Node
           </DialogTitle>
           <DialogDescription>
-            Select a new parent for "{nodeToMove.data.title}"
+            Select a new parent for "{truncateText(nodeToMove.data.title)}"
           </DialogDescription>
         </DialogHeader>
 
@@ -93,7 +139,7 @@ export function MoveNodeModal({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search nodes..."
+              placeholder="Search by title, ID, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -106,10 +152,10 @@ export function MoveNodeModal({
               {/* Option to move to root */}
               <button
                 onClick={() => handleMove(null)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors min-w-0"
               >
-                <div className="font-medium">Root Level</div>
-                <div className="text-sm text-muted-foreground">
+                <div className="font-medium truncate">Root Level</div>
+                <div className="text-sm text-muted-foreground truncate pr-2">
                   Move to top level (no parent)
                 </div>
               </button>
@@ -119,12 +165,18 @@ export function MoveNodeModal({
                 <button
                   key={node.id}
                   onClick={() => handleMove(node.id)}
-                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors min-w-0"
                 >
-                  <div className="font-medium">{node.data.title}</div>
+                  <div className="font-medium truncate">
+                    {truncateText(node.data.title)}
+                  </div>
                   {node.data.description && (
-                    <div className="text-sm text-muted-foreground line-clamp-1">
-                      {node.data.description}
+                    <div className="text-sm text-muted-foreground truncate pr-2">
+                      {truncateText(
+                        node.data.description.startsWith('##')
+                          ? node.data.description.slice(2).trim()
+                          : node.data.description
+                      )}
                     </div>
                   )}
                 </button>

@@ -24,6 +24,7 @@ import {
   Edit2,
   Copy,
   Maximize2,
+  Undo2,
   Lock,
   Unlock,
   ZoomIn,
@@ -38,11 +39,23 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTheme } from "@/components/theme-provider";
 import { CustomNode } from "./CustomNode";
 import { NodeContextMenu } from "./NodeContextMenu";
 import { NodeDetailsDrawer } from "./NodeDetailsDrawer";
+import { NodePreviewFloat } from "./NodePreviewFloat";
 import { CommandPaletteDock } from "./CommandPaletteDock";
+import { TimelineDrawer } from "@/components/timeline/TimelineDrawer";
 import { AISuggestChildrenDialog } from "./AISuggestChildrenDialog";
 import { MoveNodeModal } from "./MoveNodeModal";
 import {
@@ -57,6 +70,8 @@ import {
 } from "@/hooks/api/useNodes";
 import { useUpdateProject } from "@/hooks/api/useProjects";
 import { useMindMapStore } from "@/store/mindMapStore";
+import { useUndoStore } from "@/store/undoStore";
+import type { NodeCreateUndoAction, NodeDeleteUndoAction, EdgeLinkUndoAction, EdgeUnlinkUndoAction } from "@/store/undoStore";
 import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
@@ -97,11 +112,13 @@ const ControlButton = memo(function ControlButton({
   icon,
   tooltip,
   isActive = false,
+  disabled = false,
 }: {
   onClick: () => void;
   icon: React.ReactNode;
   tooltip: string;
   isActive?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <MemoizedTooltip content={tooltip}>
@@ -109,6 +126,7 @@ const ControlButton = memo(function ControlButton({
         variant="ghost"
         size="sm"
         onClick={onClick}
+        disabled={disabled}
         className={cn("h-8 px-2", isActive && "text-orange-500")}
       >
         {icon}
@@ -254,9 +272,30 @@ export function MindMapEditor({
   const [activeStatusTrail, setActiveStatusTrail] = useState<string | null>(
     null
   );
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [previewNodeId, setPreviewNodeId] = useState<string | null>(null);
+  const [previewPosition, setPreviewPosition] = useState<
+    { x: number; y: number } | null
+  >(null);
+
+  const closePreview = useCallback(() => {
+    setPreviewNodeId(null);
+    setPreviewPosition(null);
+  }, [setPreviewNodeId, setPreviewPosition]);
+
+  const updatePreviewPosition = useCallback(
+    (nextPosition: { x: number; y: number }) => {
+      setPreviewPosition(nextPosition);
+    },
+    [setPreviewPosition]
+  );
 
   // Toolbar state
   const [isLocked, setIsLocked] = useState(false);
+
+  // Bulk delete state for confirmation dialog
+  const [bulkDeleteNodes, setBulkDeleteNodes] = useState<Node[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   // Store
   const {
@@ -266,6 +305,12 @@ export function MindMapEditor({
     layoutDirection,
   } = useMindMapStore();
   const queryClient = useQueryClient();
+
+  // Undo store
+  const pushUndoAction = useUndoStore((state) => state.pushAction);
+  const popUndoAction = useUndoStore((state) => state.popAction);
+  const undoStack = useUndoStore((state) => state.stack);
+  const canUndo = undoStack.length > 0;
 
   // Enable real-time refresh via WebSocket
   useProjectRefresh(projectId);
@@ -363,6 +408,8 @@ export function MindMapEditor({
 
       // API call to create relationship
       if (params.source && params.target) {
+        const edgeId = `${params.source}-${params.target}`;
+
         linkNodesMutation.mutate(
           {
             projectId,
@@ -371,6 +418,21 @@ export function MindMapEditor({
           },
           {
             onSuccess: () => {
+              // Push to undo stack
+              const newEdge: Edge = {
+                id: edgeId,
+                source: params.source,
+                target: params.target,
+                type: edgeType,
+                style: { stroke: "var(--muted-foreground)", strokeWidth: 2 },
+              };
+
+              pushUndoAction({
+                type: "edge-link",
+                projectId,
+                edgeSnapshot: newEdge,
+              });
+
               toast.success("Nodes connected");
             },
             onError: (error) => {
@@ -378,14 +440,14 @@ export function MindMapEditor({
               toast.error("Failed to connect nodes");
               // Revert the edge addition on error
               setEdges((eds) =>
-                eds.filter((e) => e.id !== `${params.source}-${params.target}`)
+                eds.filter((e) => e.id !== edgeId)
               );
             },
           }
         );
       }
     },
-    [setEdges, projectId, linkNodesMutation]
+    [setEdges, projectId, linkNodesMutation, pushUndoAction, edgeType]
   );
 
   const onInit = useCallback((instance: ReactFlowInstance) => {
@@ -863,13 +925,21 @@ export function MindMapEditor({
         };
 
         setNodes((nds) => [...nds, newFlowNode]);
+
+        // Push to undo stack
+        pushUndoAction({
+          type: "node-create",
+          projectId,
+          nodeId: createdNode.id,
+        });
+
         toast.success("Node created");
         setContextMenu(null);
       } catch (error) {
         toast.error("Failed to create node");
       }
     },
-    [projectId, createNodeMutation, reactFlowInstance, setNodes]
+    [projectId, createNodeMutation, reactFlowInstance, setNodes, pushUndoAction, layoutDirection]
   );
 
   const handleEdgeDoubleClick = useCallback(
@@ -888,6 +958,13 @@ export function MindMapEditor({
           targetId: target,
         });
 
+        // Push to undo stack
+        pushUndoAction({
+          type: "edge-unlink",
+          projectId,
+          edgeSnapshot: edge,
+        });
+
         toast.success("Connection removed");
       } catch (error) {
         // Restore the edge if the API call fails
@@ -895,7 +972,7 @@ export function MindMapEditor({
         toast.error("Failed to remove connection");
       }
     },
-    [projectId, setEdges, unlinkNodesMutation]
+    [projectId, setEdges, unlinkNodesMutation, pushUndoAction]
   );
 
   const handleInstantAddChildNode = useCallback(
@@ -903,16 +980,28 @@ export function MindMapEditor({
       const parentNode = reactFlowInstance?.getNode(parentNodeId);
       if (!parentNode) return;
 
+      // Find existing children of this parent
+      const existingChildren = nodes.filter(node => {
+        // Check if this node is connected as a child to the parent
+        return edges.some(edge =>
+          edge.source === parentNodeId && edge.target === node.id
+        );
+      });
+
       // Calculate position for the child node based on layout direction
       const isHorizontal = layoutDirection === "LR" || layoutDirection === "RL";
+
+      // Calculate offset based on number of existing children
+      const siblingOffset = existingChildren.length * 100; // 100px spacing between siblings
+
       const childPosition = {
         x: isHorizontal
           ? layoutDirection === "LR"
             ? parentNode.position.x + 250
             : parentNode.position.x - 250
-          : parentNode.position.x,
+          : parentNode.position.x + siblingOffset - (existingChildren.length * 50), // Center siblings
         y: isHorizontal
-          ? parentNode.position.y
+          ? parentNode.position.y + siblingOffset - (existingChildren.length * 50) // Offset siblings vertically in horizontal layout
           : layoutDirection === "TB"
           ? parentNode.position.y + 150
           : parentNode.position.y - 150,
@@ -980,6 +1069,19 @@ export function MindMapEditor({
           targetId: createdNode.id,
         });
 
+        // Push both node creation and edge link to undo stack
+        pushUndoAction({
+          type: "node-create",
+          projectId,
+          nodeId: createdNode.id,
+        });
+
+        pushUndoAction({
+          type: "edge-link",
+          projectId,
+          edgeSnapshot: newEdge,
+        });
+
         toast.success("Child node created");
 
         // Select the new node but don't open drawer
@@ -997,77 +1099,101 @@ export function MindMapEditor({
       setNodes,
       setEdges,
       setSelectedNodeId,
+      nodes,
+      edges,
+      pushUndoAction,
     ]
   );
 
   const handleEditNode = useCallback(
     (nodeId: string) => {
-      // Open the drawer for editing
+      closePreview();
       setSelectedNodeId(nodeId);
       useMindMapStore.getState().setDrawerOpen(true);
       setContextMenu(null);
     },
-    [setSelectedNodeId]
+    [closePreview, setSelectedNodeId]
   );
 
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
       try {
+        // Find the node to save its snapshot
+        const nodeToDelete = nodes.find(n => n.id === nodeId);
+        if (!nodeToDelete) return;
+
+        // Save connected edges for undo
+        const connectedEdges = edges.filter(
+          edge => edge.source === nodeId || edge.target === nodeId
+        );
+
         await deleteNodeMutation.mutateAsync({ nodeId, projectId });
         setNodes((nds) => nds.filter((node) => node.id !== nodeId));
         setEdges((eds) =>
           eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
         );
+
+        // Push to undo stack
+        pushUndoAction({
+          type: "node-delete",
+          projectId,
+          nodeSnapshot: nodeToDelete,
+          connectedEdges,
+        });
+
         toast.success("Node deleted");
       } catch (error) {
         toast.error("Failed to delete node");
       }
       setContextMenu(null);
     },
-    [setNodes, setEdges, deleteNodeMutation, projectId]
+    [setNodes, setEdges, deleteNodeMutation, projectId, nodes, edges, pushUndoAction]
   );
 
   const handleNodesDelete = useCallback(
     async (nodesToDelete: Node[]) => {
       if (nodesToDelete.length === 0) return;
 
+      if (nodesToDelete.length > 1) {
+        setBulkDeleteNodes(nodesToDelete);
+        setShowBulkDeleteDialog(true);
+        return;
+      }
       try {
-        if (nodesToDelete.length === 1) {
-          // Single node deletion
-          await deleteNodeMutation.mutateAsync({
-            nodeId: nodesToDelete[0].id,
-            projectId,
-          });
-          toast.success("Node deleted");
-        } else {
-          // Bulk deletion using the new bulk delete endpoint
-          const nodeIds = nodesToDelete.map((node) => node.id);
-          await bulkDeleteNodesMutation.mutateAsync({ nodeIds, projectId });
-          toast.success(`${nodesToDelete.length} nodes deleted`);
-        }
-
-        // Update local state
-        setNodes((nds) =>
-          nds.filter((node) => !nodesToDelete.find((n) => n.id === node.id))
+        const nodeToDelete = nodesToDelete[0];
+        const connectedEdges = edges.filter(
+          edge => edge.source === nodeToDelete.id || edge.target === nodeToDelete.id
         );
-        setEdges((eds) => {
-          const deletedIds = nodesToDelete.map((n) => n.id);
-          return eds.filter(
-            (edge) =>
-              !deletedIds.includes(edge.source) &&
-              !deletedIds.includes(edge.target)
-          );
+
+        await deleteNodeMutation.mutateAsync({
+          nodeId: nodeToDelete.id,
+          projectId,
         });
 
-        // Clear selection if selected node was deleted
-        if (
-          selectedNodeId &&
-          nodesToDelete.find((n) => n.id === selectedNodeId)
-        ) {
+        pushUndoAction({
+          type: "node-delete",
+          projectId,
+          nodeSnapshot: nodeToDelete,
+          connectedEdges,
+        });
+        setNodes((nds) =>
+          nds.filter((node) => node.id !== nodeToDelete.id)
+        );
+        setEdges((eds) =>
+          eds.filter(
+            (edge) =>
+              edge.source !== nodeToDelete.id &&
+              edge.target !== nodeToDelete.id
+          )
+        );
+
+        if (selectedNodeId === nodeToDelete.id) {
           setSelectedNodeId(null);
         }
+
+        toast.success("Node deleted");
       } catch (error) {
-        toast.error("Failed to delete node(s)");
+        toast.error("Failed to delete node");
       }
     },
     [
@@ -1078,6 +1204,10 @@ export function MindMapEditor({
       setEdges,
       selectedNodeId,
       setSelectedNodeId,
+      edges,
+      pushUndoAction,
+      setBulkDeleteNodes,
+      setShowBulkDeleteDialog,
     ]
   );
 
@@ -1144,26 +1274,182 @@ export function MindMapEditor({
     setContextMenu(null);
   }, []);
 
+  // Handle bulk delete confirmation
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    try {
+      const nodeIds = bulkDeleteNodes.map((node) => node.id);
+      await bulkDeleteNodesMutation.mutateAsync({ nodeIds, projectId });
+
+      // Update local state
+      setNodes((nds) =>
+        nds.filter((node) => !bulkDeleteNodes.find((n) => n.id === node.id))
+      );
+      setEdges((eds) => {
+        const deletedIds = bulkDeleteNodes.map((n) => n.id);
+        return eds.filter(
+          (edge) =>
+            !deletedIds.includes(edge.source) &&
+            !deletedIds.includes(edge.target)
+        );
+      });
+
+      // Clear selection if selected node was deleted
+      if (
+        selectedNodeId &&
+        bulkDeleteNodes.find((n) => n.id === selectedNodeId)
+      ) {
+        setSelectedNodeId(null);
+      }
+
+      toast.success(`${bulkDeleteNodes.length} nodes permanently deleted`);
+      setShowBulkDeleteDialog(false);
+      setBulkDeleteNodes([]);
+    } catch (error) {
+      toast.error("Failed to delete nodes");
+    }
+  }, [
+    bulkDeleteNodes,
+    bulkDeleteNodesMutation,
+    projectId,
+    setNodes,
+    setEdges,
+    selectedNodeId,
+    setSelectedNodeId,
+  ]);
+
+  // Handle undo operation
+  const handleUndo = useCallback(async () => {
+    const action = popUndoAction();
+    if (!action) return;
+
+    try {
+      switch (action.type) {
+        case "node-create":
+          // Undo node creation by deleting the node
+          await deleteNodeMutation.mutateAsync({
+            nodeId: action.nodeId,
+            projectId: action.projectId,
+          });
+          setNodes((nds) => nds.filter((node) => node.id !== action.nodeId));
+          setEdges((eds) =>
+            eds.filter((edge) => edge.source !== action.nodeId && edge.target !== action.nodeId)
+          );
+          toast.success("Undone: Node creation");
+          break;
+
+        case "node-delete":
+          // Undo node deletion by recreating the node
+          const createdNode = await createNodeMutation.mutateAsync({
+            projectId: action.projectId,
+            data: {
+              title: action.nodeSnapshot.data.title,
+              description: action.nodeSnapshot.data.description || "",
+              status: action.nodeSnapshot.data.status,
+              findings: action.nodeSnapshot.data.findings || null,
+              x_pos: action.nodeSnapshot.position.x,
+              y_pos: action.nodeSnapshot.position.y,
+            },
+          });
+
+          // Recreate the node in the flow
+          const restoredNode: Node = {
+            ...action.nodeSnapshot,
+            id: createdNode.id,
+            data: {
+              ...createdNode,
+              label: createdNode.title,
+            },
+          };
+          setNodes((nds) => [...nds, restoredNode]);
+
+          // Restore edges
+          for (const edge of action.connectedEdges) {
+            const newSource = edge.source === action.nodeSnapshot.id ? createdNode.id : edge.source;
+            const newTarget = edge.target === action.nodeSnapshot.id ? createdNode.id : edge.target;
+
+            await linkNodesMutation.mutateAsync({
+              projectId: action.projectId,
+              sourceId: newSource,
+              targetId: newTarget,
+            });
+
+            setEdges((eds) => [...eds, {
+              ...edge,
+              id: `${newSource}-${newTarget}`,
+              source: newSource,
+              target: newTarget,
+            }]);
+          }
+
+          toast.success("Undone: Node deletion");
+          break;
+
+        case "edge-link":
+          // Undo edge creation by removing it
+          await unlinkNodesMutation.mutateAsync({
+            projectId: action.projectId,
+            sourceId: action.edgeSnapshot.source,
+            targetId: action.edgeSnapshot.target,
+          });
+          setEdges((eds) => eds.filter((e) => e.id !== action.edgeSnapshot.id));
+          toast.success("Undone: Edge connection");
+          break;
+
+        case "edge-unlink":
+          // Undo edge deletion by recreating it
+          await linkNodesMutation.mutateAsync({
+            projectId: action.projectId,
+            sourceId: action.edgeSnapshot.source,
+            targetId: action.edgeSnapshot.target,
+          });
+          setEdges((eds) => [...eds, action.edgeSnapshot]);
+          toast.success("Undone: Edge removal");
+          break;
+      }
+    } catch (error) {
+      console.error("Undo failed:", error);
+      toast.error("Failed to undo action");
+      // Re-push the action back onto the stack since undo failed
+      pushUndoAction(action);
+    }
+  }, [
+    popUndoAction,
+    pushUndoAction,
+    deleteNodeMutation,
+    createNodeMutation,
+    linkNodesMutation,
+    unlinkNodesMutation,
+    setNodes,
+    setEdges,
+  ]);
+
   const handleNodeDoubleClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      // Disable editing in templates
-      if (!isTemplate) {
-        handleEditNode(node.id);
-      }
+      // Double-click no longer opens the edit drawer
+      // Users should right-click and select "Edit Node" instead
     },
-    [handleEditNode, isTemplate]
+    []
   );
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      // Update URL hash to include node ID
       window.location.hash = node.id;
-
-      // Open drawer for both projects and templates (read-only for templates)
       setSelectedNodeId(node.id);
-      useMindMapStore.getState().setDrawerOpen(true);
+
+      if (reactFlowWrapper.current) {
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        const pointerX = event.clientX - bounds.left;
+        const pointerY = event.clientY - bounds.top;
+        const nextPosition = {
+          x: pointerX + 24,
+          y: pointerY - 12,
+        };
+        setPreviewPosition(nextPosition);
+      }
+
+      setPreviewNodeId(node.id);
     },
-    [setSelectedNodeId]
+    [setSelectedNodeId, setPreviewNodeId, setPreviewPosition]
   );
 
   // Listen to node events
@@ -1279,6 +1565,22 @@ export function MindMapEditor({
         return;
       }
 
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        const selectedNodes = nodes.filter(node => node.selected);
+        if (selectedNodes.length > 0) {
+          handleNodesDelete(selectedNodes);
+        }
+        return;
+      }
+
+      // Undo on Ctrl+Z or Cmd+Z
+      if (event.key === "z" && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+        return;
+      }
+
       // Center view on Space
       if (event.code === "Space" && !event.ctrlKey && !event.metaKey) {
         event.preventDefault();
@@ -1316,6 +1618,9 @@ export function MindMapEditor({
     handleStatusTrail,
     reactFlowInstance,
     handleAddNode,
+    handleUndo,
+    nodes,
+    handleNodesDelete,
   ]);
 
   // Update all edges when edge type changes
@@ -1610,6 +1915,14 @@ export function MindMapEditor({
     }
   }, [apiData, hasInitialized, setNodes, setEdges, edgeType]);
 
+  useEffect(() => {
+    if (!previewNodeId || !apiData?.nodes) return;
+    const exists = apiData.nodes.some((apiNode) => apiNode.id === previewNodeId);
+    if (!exists) {
+      closePreview();
+    }
+  }, [apiData?.nodes, closePreview, previewNodeId]);
+
   if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
@@ -1640,6 +1953,16 @@ export function MindMapEditor({
             onClick={() => handleAddNode()}
             icon={<Plus className="h-4 w-4" />}
             tooltip="Add Node"
+          />
+
+          <Separator />
+
+          {/* Undo */}
+          <ControlButton
+            onClick={handleUndo}
+            icon={<Undo2 className="h-4 w-4" />}
+            tooltip="Undo (Ctrl+Z)"
+            disabled={!canUndo}
           />
 
           <Separator />
@@ -1739,7 +2062,6 @@ export function MindMapEditor({
           onNodeDoubleClick={handleNodeDoubleClick}
           onNodeClick={handleNodeClick}
           onEdgeDoubleClick={handleEdgeDoubleClick}
-          onNodesDelete={handleNodesDelete}
           onDoubleClick={(event) => {
             // Check if we clicked on empty space (not on a node/edge)
             const target = event.target as HTMLElement;
@@ -1771,7 +2093,7 @@ export function MindMapEditor({
           attributionPosition="bottom-left"
           snapToGrid
           snapGrid={[20, 20]}
-          deleteKeyCode={["Delete", "Backspace"]}
+          deleteKeyCode={null}
           multiSelectionKeyCode={["Shift", "Meta", "Control"]}
           selectionOnDrag
           zoomOnDoubleClick={false}
@@ -1824,14 +2146,37 @@ export function MindMapEditor({
           onDeleteNode={handleDeleteNode}
           onDuplicateNode={handleDuplicateNode}
           onMoveNode={(nodeId) => setMoveNodeId(nodeId)}
+          onFocusNode={handleFocusMode}
           onSuggestChildren={handleSuggestChildren}
           onClose={() => setContextMenu(null)}
         />
       )}
 
+      {previewNodeId && (
+        <NodePreviewFloat
+          projectId={projectId}
+          nodeId={previewNodeId}
+          position={previewPosition}
+          isTemplate={isTemplate}
+          onClose={closePreview}
+          onPositionChange={updatePreviewPosition}
+        />
+      )}
+
       <NodeDetailsDrawer projectId={projectId} isReadOnly={isTemplate} />
 
-      <CommandPaletteDock projectId={projectId} isTemplate={isTemplate} />
+      <CommandPaletteDock 
+        projectId={projectId} 
+        isTemplate={isTemplate}
+        timelineOpen={timelineOpen}
+        setTimelineOpen={setTimelineOpen}
+      />
+
+      <TimelineDrawer
+        open={timelineOpen}
+        onOpenChange={setTimelineOpen}
+        projectId={projectId}
+      />
 
       {suggestChildrenNodeId && (
         <AISuggestChildrenDialog
@@ -1858,6 +2203,33 @@ export function MindMapEditor({
         nodes={nodes}
         onMove={handleMoveNode}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {bulkDeleteNodes.length} nodes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete {bulkDeleteNodes.length} nodes and cannot be undone.
+              All connections to these nodes will also be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowBulkDeleteDialog(false);
+              setBulkDeleteNodes([]);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

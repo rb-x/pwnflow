@@ -100,7 +100,6 @@ async def create_node_for_project(
         title: $title,
         description: $description,
         status: $status,
-        findings: $findings,
         x_pos: $x_pos,
         y_pos: $y_pos,
         created_at: datetime(),

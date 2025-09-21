@@ -1,0 +1,130 @@
+services:
+  vectr-postgres:
+    image: postgres:15-alpine
+    networks:
+      - vectr_bridge
+    volumes:
+      - vectr-rdb:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    restart: unless-stopped
+
+  vectr-tomcat:
+    image: securityriskadvisors/vectr_tomcat:9.9.0
+    networks:
+      vectr_bridge:
+        aliases:
+          - ${VECTR_HOSTNAME}
+    volumes:
+      #- ./resources:/opt/vectr/resources
+      - vectr-resources:/opt/vectr/resources
+      - vectr-cert:/opt/vectr/cert
+      - ./user:/opt/vectr/user
+      #- vectr-user:/opt/vectr/user
+      #- ./logs:/opt/vectr/logs
+      - vectr-logs:/opt/vectr/logs
+      - builder-runtimes:/opt/vectr/rta
+      - vectr-static:/opt/vectr/static
+      - vectr-icon-uploads:/opt/vectr/icons
+    env_file:
+      - ./.env
+    restart: unless-stopped
+    depends_on:
+      - vectr-postgres
+
+  vectr-webui:
+    image: securityriskadvisors/vectr_caddy_ui:9.9.0
+    networks:
+      vectr_bridge:
+        aliases:
+          - ${VECTR_HOSTNAME}
+    volumes:
+      - vectr-static:${VECTR_UI_ROOT:-/opt/vectr/webui}/static
+      - vectr-icon-uploads:/opt/vectr/icons
+    env_file:
+      - ./.env
+    restart: unless-stopped
+    depends_on:
+      - vectr-tomcat
+
+  vectr-caddy-gateway:
+    image: securityriskadvisors/vectr_caddy_gateway:9.9.0
+    networks:
+      vectr_bridge:
+        aliases:
+          - ${VECTR_HOSTNAME}
+    env_file:
+      - ./.env
+    volumes:
+      # In order to access caddy generated certificates we have two options
+      # 1. Mount cert folder
+      # 2. Copy caddy data folder to local system 'docker cp {container_name}:/opt/vectr/cert/caddy /path/on/host'
+      #- ./cert:/opt/vectr/cert
+      - vectr-cert:/opt/vectr/cert
+    ports:
+      - "${VECTR_PORT:-8081}:8443"
+    restart: unless-stopped
+    depends_on:
+      - vectr-tomcat
+      - vectr-webui
+
+  vectr-rta-webserver:
+    image: securityriskadvisors/rta_webserver:9.9.0
+    networks:
+      - vectr_bridge
+    env_file:
+      - ./.env
+    depends_on:
+      - vectr-rta-redis
+    restart: unless-stopped
+
+  vectr-rta-builder:
+    image: securityriskadvisors/rta_builder:9.9.0
+    networks:
+      - vectr_bridge
+    volumes:
+      - builder-runtimes:/builds
+    env_file:
+      - ./.env
+    depends_on:
+      - vectr-rta-redis
+    restart: unless-stopped
+
+  vectr-rta-redis:
+    image: redis:7.4-alpine
+    volumes:
+      - redis-db:/data
+    env_file:
+      - ./.env
+    networks:
+      - vectr_bridge
+    command: ["redis-server", "--requirepass", "$REDIS_PASSWORD"]
+    restart: unless-stopped
+
+
+networks:
+  vectr_bridge:
+    ipam:
+      driver: default
+      config:
+        - subnet: "${VECTR_NETWORK_SUBNET:-10.0.27.0/24}"
+
+volumes:
+  vectr-logs:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-logs
+  vectr-resources:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-resources
+  vectr-cert:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-cert
+  vectr-static:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-static
+  vectr-user:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-user
+  vectr-rdb:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-rdb
+  vectr-icon-uploads:
+    name: ${COMPOSE_PROJECT_NAME}-vectr-icon-uploads
+  builder-runtimes:
+    name: ${COMPOSE_PROJECT_NAME}-builder-runtimes
+  redis-db:
+    name: ${COMPOSE_PROJECT_NAME}-redis-db

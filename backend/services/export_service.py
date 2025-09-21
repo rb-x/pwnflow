@@ -81,7 +81,8 @@ class ExportService:
         user: User,
         encryption_method: EncryptionMethod,
         password: Optional[str] = None,
-        include_variables: bool = True
+        include_variables: bool = True,
+        include_scope: bool = True
     ) -> Tuple[str, Optional[str]]:
         """Export a project to an encrypted file."""
         
@@ -96,7 +97,7 @@ class ExportService:
         async with self.driver.session() as session:
             # Fetch project data
             project_data = await self._fetch_project_data(
-                session, project_id, str(user.id), include_variables
+                session, project_id, str(user.id), include_variables, include_scope
             )
             
             if not project_data:
@@ -122,7 +123,8 @@ class ExportService:
                 "variables": project_data["variables"] if include_variables else [],
                 "commands": project_data["commands"],
                 "findings": project_data["findings"],
-                "tags": project_data["tags"]
+                "tags": project_data["tags"],
+                "scope_assets": project_data["scope_assets"] if include_scope else []
             }
 
             # Calculate checksum
@@ -146,7 +148,8 @@ class ExportService:
                         "variables": export_data["variables"],
                         "commands": export_data["commands"],
                         "findings": export_data["findings"],
-                        "tags": export_data["tags"]
+                        "tags": export_data["tags"],
+                        "scope_assets": export_data["scope_assets"]
                     }).encode()
                     
                     if encryption_method == EncryptionMethod.NONE:
@@ -162,7 +165,7 @@ class ExportService:
             return filename, generated_password
 
     async def _fetch_project_data(self, session, project_id: str, user_id: str, 
-                                  include_variables: bool) -> Dict[str, Any]:
+                                  include_variables: bool, include_scope: bool = True) -> Dict[str, Any]:
         """Fetch all project data from Neo4j."""
         # Verify ownership
         result = await session.run("""
@@ -305,6 +308,26 @@ class ExportService:
         
         tags = [record["name"] async for record in tags_result]
         
+        # Fetch scope assets (if requested)
+        scope_assets = []
+        if include_scope:
+            scope_result = await session.run("""
+                MATCH (u:User {id: $user_id})-[:OWNS]->(p:Project {id: $project_id})
+                MATCH (p)-[:HAS_SCOPE_ASSET]->(a:ScopeAsset)
+                OPTIONAL MATCH (a)-[:TAGGED_WITH]->(st:ScopeTag)
+                RETURN a, collect(DISTINCT st.name) as tags
+            """, user_id=user_id, project_id=project_id)
+            
+            async for record in scope_result:
+                asset = dict(record["a"])
+                # Convert DateTime objects to ISO strings
+                if "created_at" in asset and asset["created_at"] and hasattr(asset["created_at"], 'isoformat'):
+                    asset["created_at"] = asset["created_at"].isoformat()
+                if "updated_at" in asset and asset["updated_at"] and hasattr(asset["updated_at"], 'isoformat'):
+                    asset["updated_at"] = asset["updated_at"].isoformat()
+                asset["tags"] = record["tags"] or []
+                scope_assets.append(asset)
+        
         return {
             "project": {
                 "name": project["name"],
@@ -318,7 +341,8 @@ class ExportService:
             "variables": variables,
             "commands": commands,
             "findings": findings,
-            "tags": tags
+            "tags": tags,
+            "scope_assets": scope_assets
         }
 
     async def export_template(

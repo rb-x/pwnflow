@@ -825,22 +825,16 @@ export function NodeDetailsDrawer({
           side="right"
           className={cn(
             "fixed z-50 gap-4",
-            "data-[state=closed]:duration-300 data-[state=open]:duration-500",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "inset-y-0 h-[81vh] border",
-            "right-3 bottom-[-3px]",
-            "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
-            "sm:max-w-sm mt-auto mb-4",
-            "translate-x-0 shadow rounded-lg",
-            "transition-transform duration-300 ease-in-out",
-            "data-[stacked=behind]:translate-x-[-15px] data-[stacked=behind]:scale-[0.97] data-[stacked=behind]:opacity-50",
-            "data-[stacked=front]:translate-x-[15px]",
-            "w-full md:w-[80%] lg:w-[60%]",
-            "min-w-[300px] md:min-w-[600px] lg:min-w-[700px]",
-            "bg-background border-border",
-            "data-[state=open]:shadow-lg",
+            "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+            "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+            "data-[state=open]:animate-none data-[state=closed]:animate-none",
+            "inset-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+            "w-full max-w-[960px] sm:max-w-[90vw] h-[85vh]",
+            "border border-border bg-background shadow-xl rounded-2xl",
             "overflow-hidden flex flex-col p-0",
-            "[&>button]:hidden" // Hide the default close button
+            "transition-all duration-300",
+            "[&>button]:hidden"
           )}
         >
           <SheetHeader className="flex flex-col space-y-2 text-center sm:text-left border-b border-border shrink-0">
@@ -897,7 +891,7 @@ export function NodeDetailsDrawer({
                 disabled={isReadOnly}
               >
                 <SelectTrigger
-                  className="w-[180px] shrink-0 font-medium"
+                  className="w-[160px] shrink-0 font-medium h-8 px-2"
                   disabled={isReadOnly}
                 >
                   <SelectValue />
@@ -935,6 +929,15 @@ export function NodeDetailsDrawer({
                   </SelectItem>
                 </SelectContent>
               </Select>
+              <div className="h-6 w-px bg-border/70 mx-2" />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={() => setDrawerOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </SheetHeader>
 

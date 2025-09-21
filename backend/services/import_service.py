@@ -44,6 +44,11 @@ class ImportService:
             old_id = finding["id"]
             uuid_map[old_id] = str(uuid.uuid4())
         
+        # Generate new UUIDs for scope assets
+        for scope_asset in data.get("scope_assets", []):
+            old_id = scope_asset["id"]
+            uuid_map[old_id] = str(uuid.uuid4())
+        
         return uuid_map
 
     def rewrite_uuids(self, data: Dict[str, Any], uuid_map: Dict[str, str]) -> Dict[str, Any]:
@@ -84,6 +89,10 @@ class ImportService:
             finding["id"] = uuid_map[finding["id"]]
             if finding.get("node_id") and finding["node_id"] in uuid_map:
                 finding["node_id"] = uuid_map[finding["node_id"]]
+        
+        # Rewrite scope asset IDs
+        for scope_asset in data.get("scope_assets", []):
+            scope_asset["id"] = uuid_map[scope_asset["id"]]
         
         return data
 
@@ -157,7 +166,8 @@ class ImportService:
                     "context_count": len(data.get("contexts", [])),
                     "command_count": len(data.get("commands", [])),
                     "variable_count": len(data.get("variables", [])),
-                    "tag_count": len(data.get("tags", []))
+                    "tag_count": len(data.get("tags", [])),
+                    "scope_asset_count": len(data.get("scope_assets", []))
                 }
                 
                 # Get project/template info
@@ -444,6 +454,53 @@ class ImportService:
                         value=variable.get("value", ""),
                         description=variable.get("description", ""),
                         sensitive=variable.get("sensitive", False)
+                    )
+            
+            # Create scope assets (if present in import data - for legacy compatibility)
+            for scope_asset in data.get("scope_assets", []):
+                await session.run("""
+                    MATCH (p:Project {id: $project_id})
+                    CREATE (a:ScopeAsset {
+                        id: $asset_id,
+                        ip: $ip,
+                        port: $port,
+                        protocol: $protocol,
+                        hostnames: $hostnames,
+                        vhosts: $vhosts,
+                        notes: $notes,
+                        status: $status,
+                        discovered_via: $discovered_via,
+                        created_at: datetime(),
+                        updated_at: datetime()
+                    })
+                    CREATE (p)-[:HAS_SCOPE_ASSET]->(a)
+                """,
+                    project_id=project_id,
+                    asset_id=scope_asset["id"],
+                    ip=scope_asset.get("ip", ""),
+                    port=scope_asset.get("port"),
+                    protocol=scope_asset.get("protocol", "tcp"),
+                    hostnames=scope_asset.get("hostnames", []),
+                    vhosts=scope_asset.get("vhosts", []),
+                    notes=scope_asset.get("notes", ""),
+                    status=scope_asset.get("status", "not_tested"),
+                    discovered_via=scope_asset.get("discovered_via", "manual")
+                )
+                
+                # Add tags to scope asset
+                for tag in scope_asset.get("tags", []):
+                    tag_id = str(uuid.uuid4())
+                    await session.run("""
+                        MATCH (p:Project {id: $project_id})-[:HAS_SCOPE_ASSET]->(a:ScopeAsset {id: $asset_id})
+                        MERGE (t:ScopeTag {id: $tag_id, name: $tag_name, color: $tag_color, is_predefined: $is_predefined})
+                        CREATE (a)-[:TAGGED_WITH]->(t)
+                    """,
+                        project_id=project_id,
+                        asset_id=scope_asset["id"],
+                        tag_id=tag_id,
+                        tag_name=tag,
+                        tag_color='bg-gray-500',
+                        is_predefined=False
                     )
             
             return project_id

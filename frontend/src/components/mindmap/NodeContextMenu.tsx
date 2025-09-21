@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Plus, Edit2, Trash2, Copy, Sparkles, Move } from 'lucide-react';
+import { Plus, Edit2, Trash2, Copy, Sparkles, Move, Focus } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -17,6 +17,7 @@ interface NodeContextMenuProps {
   onDeleteNode: (nodeId: string) => void;
   onDuplicateNode: (nodeId: string) => void;
   onMoveNode?: (nodeId: string) => void;
+  onFocusNode?: (nodeId: string) => void;
   onSuggestChildren?: (nodeId: string) => void;
   onClose: () => void;
 }
@@ -30,6 +31,7 @@ export function NodeContextMenu({
   onDeleteNode,
   onDuplicateNode,
   onMoveNode,
+  onFocusNode,
   onSuggestChildren,
   onClose,
 }: NodeContextMenuProps) {
@@ -71,6 +73,15 @@ export function NodeContextMenu({
               <Copy className="h-3.5 w-3.5" />
               Duplicate
             </button>
+            {onFocusNode && (
+              <button
+                className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent rounded-sm"
+                onClick={() => onFocusNode(nodeId)}
+              >
+                <Focus className="h-3.5 w-3.5" />
+                Focus Mode
+              </button>
+            )}
             {onMoveNode && (
               <button
                 className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent rounded-sm"

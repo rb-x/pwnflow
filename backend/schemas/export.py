@@ -11,6 +11,7 @@ class EncryptionMethod(str, Enum):
 
 class ExportOptions(BaseModel):
     include_variables: bool = True
+    include_scope: bool = True
 
 
 class ExportEncryption(BaseModel):
@@ -58,5 +59,6 @@ class ImportPreviewResponse(BaseModel):
     command_count: int
     variable_count: int
     tag_count: int
+    scope_asset_count: int
     exported_at: str
     format_version: str

@@ -244,33 +244,6 @@ export const CustomNode = memo(
             >
               <Plus className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handleDuplicate}
-              title="Duplicate Node"
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("h-7 w-7", isFocused && "text-primary")}
-              onClick={handleFocus}
-              title="Focus Mode"
-            >
-              <Focus className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={handleMove}
-              title="Move Node"
-            >
-              <Move className="h-3.5 w-3.5" />
-            </Button>
             <div className="w-px h-5 bg-border mx-1" />
             <Button
               variant="ghost"

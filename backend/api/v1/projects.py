@@ -21,6 +21,7 @@ from services.import_service import ImportService
 from services.ws_notifications import notification_manager
 from . import nodes as nodes_router
 from . import contexts as contexts_router
+from . import scope as scope_router
 
 router = APIRouter()
 project_crud_router = APIRouter(tags=["Projects"])
@@ -259,7 +260,8 @@ async def export_project(
             user=current_user,
             encryption_method=request.encryption.method,
             password=request.encryption.password,
-            include_variables=request.options.include_variables
+            include_variables=request.options.include_variables,
+            include_scope=request.options.include_scope
         )
         
         # Generate a temporary job ID
@@ -370,4 +372,5 @@ async def get_project_timeline(
 router.include_router(project_crud_router, prefix="")
 router.include_router(project_category_tags_router, prefix="")
 router.include_router(nodes_router.router, prefix="/{project_id}/nodes")
-router.include_router(contexts_router.router, prefix="/{project_id}/contexts") 
+router.include_router(contexts_router.router, prefix="/{project_id}/contexts")
+router.include_router(scope_router.router, prefix="/{project_id}/scope") 

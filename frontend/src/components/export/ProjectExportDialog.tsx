@@ -51,6 +51,7 @@ export function ProjectExportDialog({
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [jobId, setJobId] = useState("");
   const [includeVariables, setIncludeVariables] = useState(true);
+  const [includeScope, setIncludeScope] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -98,6 +99,7 @@ export function ProjectExportDialog({
         },
         options: {
           include_variables: includeVariables,
+          include_scope: includeScope,
         },
       });
 
@@ -254,6 +256,27 @@ export function ProjectExportDialog({
                     </Label>
                     <p className="text-muted-foreground text-xs mt-2">
                       Contains sensitive data like API keys and passwords
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="include-scope"
+                    checked={includeScope}
+                    onCheckedChange={(checked) =>
+                      setIncludeScope(checked as boolean)
+                    }
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="include-scope"
+                      className="font-normal cursor-pointer"
+                    >
+                      Include Scope
+                    </Label>
+                    <p className="text-muted-foreground text-xs mt-2">
+                      Include scope assets, services, and hostnames in export
                     </p>
                   </div>
                 </div>

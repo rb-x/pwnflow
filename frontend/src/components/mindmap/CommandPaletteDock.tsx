@@ -6,6 +6,8 @@ import {
   Package,
   MessageSquare,
   GitBranch,
+  Target,
+  Clock,
 } from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { useMindMapStore } from "@/store/mindMapStore";
@@ -17,15 +19,18 @@ import { ContextModal } from "./ContextModal";
 import { AIChatPopover } from "./AIChatPopover";
 import { NodeTableDrawer } from "./NodeTableDrawer";
 import { ProjectExportDialog } from "@/components/export/ProjectExportDialog";
+import { ScopeDrawer } from "@/components/scope/ScopeDrawer";
 import { useProject } from "@/hooks/api/useProjects";
 import { StatusTrailsPopover } from "./StatusTrailsPopover";
 
 interface CommandPaletteDockProps {
   projectId: string;
   isTemplate?: boolean;
+  timelineOpen?: boolean;
+  setTimelineOpen?: (open: boolean) => void;
 }
 
-export function CommandPaletteDock({ projectId, isTemplate = false }: CommandPaletteDockProps) {
+export function CommandPaletteDock({ projectId, isTemplate = false, timelineOpen = false, setTimelineOpen }: CommandPaletteDockProps) {
   const { setDrawerOpen } = useMindMapStore();
   const { toggle: toggleNodeTable } = useNodeTableStore();
   const reactFlowInstance = useReactFlow();
@@ -33,6 +38,7 @@ export function CommandPaletteDock({ projectId, isTemplate = false }: CommandPal
   const [showContextModal, setShowContextModal] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showScopeDrawer, setShowScopeDrawer] = useState(false);
   const [activeStatusTrail, setActiveStatusTrail] = useState<string | null>(null);
 
   // Detect OS for consistent keyboard shortcuts
@@ -83,6 +89,16 @@ export function CommandPaletteDock({ projectId, isTemplate = false }: CommandPal
       if ((e.ctrlKey || e.metaKey) && e.key === "g") {
         e.preventDefault();
         setShowAIChat(true);
+      }
+      // Ctrl+R or Cmd+R for Scope Management  
+      if ((e.ctrlKey || e.metaKey) && e.key === "r") {
+        e.preventDefault();
+        setShowScopeDrawer(true);
+      }
+      // Ctrl+T or Cmd+T for Timeline
+      if ((e.ctrlKey || e.metaKey) && e.key === "t") {
+        e.preventDefault();
+        setTimelineOpen?.(true);
       }
       // T for Node Table (keep as alternative)
       if (e.key === "t" && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -137,6 +153,18 @@ export function CommandPaletteDock({ projectId, isTemplate = false }: CommandPal
         shortcut: `${modKey}+M`,
       },
       {
+        icon: Target,
+        label: "Scope Management",
+        onClick: () => setShowScopeDrawer(true),
+        shortcut: `${modKey}+R`,
+      },
+      {
+        icon: Clock,
+        label: "Findings Timeline",
+        onClick: () => setTimelineOpen?.(true),
+        shortcut: `${modKey}+T`,
+      },
+      {
         icon: Download,
         label: "Export Project",
         onClick: () => setShowExportDialog(true),
@@ -187,6 +215,13 @@ export function CommandPaletteDock({ projectId, isTemplate = false }: CommandPal
         isTemplate={false}
       />
       <NodeTableDrawer projectId={projectId} isReadOnly={isTemplate} projectName={project?.name} />
+      {!isTemplate && (
+        <ScopeDrawer
+          open={showScopeDrawer}
+          onOpenChange={setShowScopeDrawer}
+          projectId={projectId}
+        />
+      )}
       {project && (
         <ProjectExportDialog
           open={showExportDialog}
