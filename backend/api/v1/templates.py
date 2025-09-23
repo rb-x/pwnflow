@@ -310,7 +310,7 @@ async def preview_template_import(
 ):
     """Preview a template import file."""
     # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.penflow-template') as tmp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pwnflow-template') as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
@@ -336,11 +336,11 @@ async def import_template(
 ):
     """Import a template from file."""
     # Validate file extension
-    if not file.filename.endswith('.penflow-template'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Expected .penflow-template")
+    if not file.filename.endswith('.pwnflow-template'):
+        raise HTTPException(status_code=400, detail="Invalid file type. Expected .pwnflow-template")
     
     # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.penflow-template') as tmp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pwnflow-template') as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name

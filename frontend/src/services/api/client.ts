@@ -11,7 +11,7 @@ export const apiClient = axios.create({
 // Request interceptor for auth
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("penflow_token");
+    const token = localStorage.getItem("pwnflow_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -32,7 +32,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid
-      localStorage.removeItem("penflow_token");
+      localStorage.removeItem("pwnflow_token");
       window.location.href = "/login";
     }
     return Promise.reject(error);

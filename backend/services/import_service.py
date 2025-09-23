@@ -189,7 +189,7 @@ class ImportService:
         
         except zipfile.BadZipFile:
             return {
-                "error": "Invalid file format. The file is not a valid .penflow-project file."
+                "error": "Invalid file format. The file is not a valid .pwnflow-project file."
             }
         except Exception as e:
             import traceback
@@ -213,8 +213,8 @@ class ImportService:
                 metadata = json.loads(zf.read('metadata.json').decode('utf-8'))
                 
                 # Validate format
-                if metadata.get("format") != "penflow-project":
-                    raise ValueError("Invalid file format. Expected penflow-project")
+                if metadata.get("format") != "pwnflow-project":
+                    raise ValueError("Invalid file format. Expected pwnflow-project")
                 
                 # Read and decrypt data if needed
                 is_encrypted = 'data.enc' in zf.namelist()
@@ -528,8 +528,8 @@ class ImportService:
                 metadata = json.loads(zf.read('metadata.json').decode('utf-8'))
                 
                 # Validate format
-                if metadata.get("format") != "penflow-template":
-                    raise ValueError("Invalid file format. Expected penflow-template")
+                if metadata.get("format") != "pwnflow-template":
+                    raise ValueError("Invalid file format. Expected pwnflow-template")
                 
                 # Read and decrypt data if needed
                 is_encrypted = 'data.enc' in zf.namelist()

@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: "penflow-auth",
+      name: "pwnflow-auth",
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,

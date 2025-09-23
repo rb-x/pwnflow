@@ -89,7 +89,9 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
   };
 
   // Detect severity from finding content
-  const detectSeverity = (content: string): "critical" | "high" | "medium" | "low" | "info" => {
+  type SeverityLevel = "critical" | "high" | "medium" | "low" | "info";
+
+  const detectSeverity = (content: string): SeverityLevel => {
     const lowerContent = content.toLowerCase();
     if (lowerContent.includes('critical') || lowerContent.includes('exploit') || lowerContent.includes('rce')) {
       return 'critical';
@@ -104,6 +106,13 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
       return 'low';
     }
     return 'info';
+  };
+
+  const getEventSeverity = (event: TimelineEvent): SeverityLevel | null => {
+    if (event.severity) return event.severity as SeverityLevel;
+    if (event.metadata?.severity) return event.metadata.severity as SeverityLevel;
+    if (event.content) return detectSeverity(event.content);
+    return null;
   };
 
   const getEventIcon = (event: TimelineEvent) => {
@@ -232,9 +241,9 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
     }
 
     // Severity filtering
-    if (severityFilter !== "all" && event.content) {
-      const detectedSeverity = detectSeverity(event.content);
-      if (detectedSeverity !== severityFilter) {
+    if (severityFilter !== "all") {
+      const detectedSeverity = getEventSeverity(event);
+      if (!detectedSeverity || detectedSeverity !== severityFilter) {
         return false;
       }
     }
@@ -246,88 +255,117 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-96 p-0">
+      <SheetContent
+        side="right"
+        className="w-[420px] max-w-[92vw] border-none p-0 bg-background/95 backdrop-blur"
+      >
         <div className="flex flex-col h-full">
-          <SheetHeader className="p-6 pb-4 border-b">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              <SheetTitle>Findings Timeline</SheetTitle>
+          <SheetHeader className="space-y-2 border-b border-border/60 bg-card/60 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <SheetTitle className="text-base font-semibold text-foreground">
+                  Findings Timeline
+                </SheetTitle>
+                <SheetDescription className="text-xs text-muted-foreground/80">
+                  Chronological view of findings, updates, and activities
+                </SheetDescription>
+              </div>
             </div>
-            <SheetDescription>
-              Chronological view of findings and activities
-            </SheetDescription>
           </SheetHeader>
 
           {/* Filters */}
-          <div className="p-4 border-b bg-muted/20 space-y-3">
-            {/* Date Range Filter */}
-            <div>
-              <div className="text-xs font-medium text-foreground mb-2">Date Range</div>
-              <DateRangePicker
-                onUpdate={(values) => setDateRange(values.range)}
-                align="start"
-                showCompare={false}
-                className="w-full"
-              />
-            </div>
-
-            {/* Severity Filter */}
-            <div>
-              <div className="text-xs font-medium text-foreground mb-2">Severity</div>
-              <Select value={severityFilter} onValueChange={(value: any) => setSeverityFilter(value)}>
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue placeholder="Filter by severity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Severities</SelectItem>
-                  <SelectItem value="critical">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-red-600"></div>
-                      Critical
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="high">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                      High
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="medium">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                      Medium
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="low">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                      Low
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="info">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      Info
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="border-b border-border/60 bg-card/40 px-5 py-4">
+            <div className="space-y-4 rounded-xl border border-border/70 bg-background/70 p-4 shadow-sm">
+              <div className="grid gap-3">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  Date Range
+                </label>
+                <DateRangePicker
+                  onUpdate={(values) => setDateRange(values.range)}
+                  align="start"
+                  showCompare={false}
+                  className="w-full"
+                />
+              </div>
+              <div className="grid gap-3">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  Severity
+                </label>
+                <Select
+                  value={severityFilter}
+                  onValueChange={(value: any) => setSeverityFilter(value)}
+                >
+                  <SelectTrigger className="h-9 w-full rounded-lg border-border/70 bg-background/80 text-sm">
+                    <SelectValue placeholder="Filter by severity" />
+                  </SelectTrigger>
+                  <SelectContent className="w-[220px]">
+                    <SelectItem value="all">All Severities</SelectItem>
+                    <SelectItem value="critical">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
+                        Critical
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="high">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-red-400" />
+                        High
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="medium">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-orange-400" />
+                        Medium
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="low">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                        Low
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="info">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-blue-400" />
+                        Info
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
           {/* Timeline Content */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 px-5 py-5">
             {loading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="text-sm text-muted-foreground">Loading timeline...</div>
+              <div className="flex h-32 items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground shadow-inner">
+                Loading timeline…
               </div>
             ) : eventGroups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-center">
-                <Calendar className="h-8 w-8 text-muted-foreground mb-2" />
-                <div className="text-sm text-muted-foreground">No timeline events found</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {(dateRange?.from || dateRange?.to || severityFilter !== "all") ? "Try adjusting your filters" : "Start by creating findings"}
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card/40 px-6 py-12 text-center shadow-inner">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-background/70">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
                 </div>
+                <div className="mt-4 text-sm font-medium text-foreground/90">
+                  No timeline events yet
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {dateRange?.from || dateRange?.to || severityFilter !== "all"
+                    ? "Try adjusting your filters"
+                    : "Findings will appear here as you document them"}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 h-7 px-3 text-xs"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Create your first finding
+                </Button>
               </div>
             ) : (
               <div className="space-y-6">
@@ -360,13 +398,15 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
                           className="relative group"
                         >
                           {/* Timeline connector */}
-                          <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
-                          <div className="absolute left-0 top-6 w-2 h-2 rounded-full bg-background border-2 border-border" />
+                          <div className="absolute left-0 top-0 bottom-0 w-px bg-border/70" />
+                          <div className="absolute left-0 top-6 h-2 w-2 -translate-x-[3px] rounded-full border-2 border-primary/50 bg-background" />
                           
                           {/* Event content */}
-                          <div className="ml-6 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors group-hover:bg-muted/30">
+                          <div className="ml-6 overflow-hidden rounded-xl border border-border/60 bg-card/80 p-3 shadow-sm transition-colors hover:border-primary/40 hover:bg-card">
                             <div className="flex items-start gap-3">
-                              <div className="mt-0.5">{getEventIcon(event)}</div>
+                              <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                {getEventIcon(event)}
+                              </div>
                               
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -378,26 +418,32 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
                                   </div>
                                 </div>
                                 
-                                <div className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                <div className="text-xs text-muted-foreground mb-2 line-clamp-3">
                                   {event.content || event.description || "No description available"}
                                 </div>
 
                                 <div className="flex items-center gap-2">
                                   {/* Severity Badge */}
-                                  {event.content && (
-                                    <Badge className={cn(
-                                      "text-xs px-2 py-0.5",
-                                      {
-                                        "bg-red-600 text-white": detectSeverity(event.content) === "critical",
-                                        "bg-red-500 text-white": detectSeverity(event.content) === "high", 
-                                        "bg-orange-500 text-white": detectSeverity(event.content) === "medium",
-                                        "bg-yellow-500 text-black": detectSeverity(event.content) === "low",
-                                        "bg-blue-500 text-white": detectSeverity(event.content) === "info",
-                                      }
-                                    )}>
-                                      {detectSeverity(event.content).toUpperCase()}
+                                  {(() => {
+                                    const severity = getEventSeverity(event);
+                                    if (!severity) return null;
+                                    if (severity === "info") return null;
+                                    return (
+                                    <Badge
+                                      className={cn(
+                                        "text-[10px] font-semibold tracking-[0.08em] uppercase px-2 py-0.5 leading-tight",
+                                        {
+                                          "border border-red-500/40 bg-red-500/10 text-red-200": severity === "critical",
+                                          "border border-red-400/40 bg-red-400/10 text-red-200": severity === "high",
+                                          "border border-orange-400/40 bg-orange-400/10 text-orange-200": severity === "medium",
+                                          "border border-yellow-400/40 bg-yellow-400/10 text-yellow-100": severity === "low",
+                                        }
+                                      )}
+                                    >
+                                      {severity.toUpperCase()}
                                     </Badge>
-                                  )}
+                                    );
+                                  })()}
 
                                   {event.created_by && (
                                     <div className="text-xs text-muted-foreground">

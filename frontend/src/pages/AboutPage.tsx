@@ -19,7 +19,7 @@ export function AboutPage() {
     <div className="p-8 max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">About Penflow</h1>
+        <h1 className="text-4xl font-bold">About Pwnflow</h1>
         <p className="text-lg text-muted-foreground">
           A modern cybersecurity mind mapping platform designed for security
           professionals
@@ -29,7 +29,7 @@ export function AboutPage() {
       {/* Features */}
       <Card>
         <CardHeader>
-          <CardTitle>Why Penflow?</CardTitle>
+          <CardTitle>Why Pwnflow?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -76,7 +76,7 @@ export function AboutPage() {
 
           <div className="pt-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Penflow combines the power of mind mapping with cybersecurity
+              Pwnflow combines the power of mind mapping with cybersecurity
               workflows, enabling teams to visualize, plan, and execute security
               assessments more effectively.
             </p>
@@ -202,7 +202,7 @@ export function AboutPage() {
         <CardContent className="space-y-2">
           <Button variant="outline" className="w-full justify-start" asChild>
             <a
-              href="https://github.com/rb-x/penflow"
+              href="https://github.com/rb-x/pwnflow"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -213,7 +213,7 @@ export function AboutPage() {
           </Button>
           <Button variant="outline" className="w-full justify-start" asChild>
             <a
-              href="https://docs.penflow.sh"
+              href="https://docs.pwnflow.sh"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -227,7 +227,7 @@ export function AboutPage() {
 
       {/* Version */}
       <div className="text-center text-sm text-muted-foreground">
-        <p>Penflow v1.0.0 • Made with ❤️ for the security community</p>
+        <p>Pwnflow v1.1.0 • Made with ❤️ for the security community</p>
       </div>
     </div>
   );

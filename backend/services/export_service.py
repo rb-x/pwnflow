@@ -105,13 +105,13 @@ class ExportService:
 
             # Prepare export data
             export_data = {
-                "format": "penflow-project",
+                "format": "pwnflow-project",
                 "version": "1.0",
                 "metadata": {
-                    "format": "penflow-project",
+                    "format": "pwnflow-project",
                     "version": "1.0",
                     "exported_at": datetime.utcnow().isoformat(),
-                    "penflow_version": "2.0.0",
+                    "pwnflow_version": "1.1.0",
                     "project_name": project_data["project"]["name"],
                     "node_count": len(project_data["nodes"]),
                     "checksum": ""
@@ -132,7 +132,7 @@ class ExportService:
             export_data["metadata"]["checksum"] = self.calculate_checksum(data_json)
 
             # Create temporary file
-            with tempfile.NamedTemporaryFile(suffix='.penflow-project', delete=False) as tmp_file:
+            with tempfile.NamedTemporaryFile(suffix='.pwnflow-project', delete=False) as tmp_file:
                 filename = tmp_file.name
                 
                 with zipfile.ZipFile(filename, 'w') as zf:
@@ -380,13 +380,13 @@ class ExportService:
 
             # Prepare export data
             export_data = {
-                "format": "penflow-template",
+                "format": "pwnflow-template",
                 "version": "1.0",
                 "metadata": {
-                    "format": "penflow-template",
+                    "format": "pwnflow-template",
                     "version": "1.0",
                     "exported_at": datetime.utcnow().isoformat(),
-                    "penflow_version": "2.0.0",
+                    "pwnflow_version": "1.1.0",
                     "template_name": template_data["template"]["name"],
                     "author": "anonymous",  # Privacy
                     "node_count": len(template_data["nodes"]),
@@ -406,7 +406,7 @@ class ExportService:
             export_data["metadata"]["checksum"] = self.calculate_checksum(data_json)
 
             # Create temporary file
-            with tempfile.NamedTemporaryFile(suffix='.penflow-template', delete=False) as tmp_file:
+            with tempfile.NamedTemporaryFile(suffix='.pwnflow-template', delete=False) as tmp_file:
                 filename = tmp_file.name
                 
                 with zipfile.ZipFile(filename, 'w') as zf:

@@ -2,7 +2,7 @@ services:
   # Neo4j Database
   neo4j:
     image: neo4j:latest
-    container_name: penflow-neo4j-prod
+    container_name: pwnflow-neo4j-prod
     # Remove external ports - only accessible within network
     volumes:
       - $PWD/neo4j-data-prod:/data
@@ -12,7 +12,7 @@ services:
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
     restart: unless-stopped
     networks:
-      - penflow-prod-network
+      - pwnflow-prod-network
     healthcheck:
       test:
         [
@@ -27,13 +27,13 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: penflow-redis-prod
+    container_name: pwnflow-redis-prod
     volumes:
       - redis-data-prod:/data
     restart: unless-stopped
     command: redis-server --appendonly yes
     networks:
-      - penflow-prod-network
+      - pwnflow-prod-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -46,7 +46,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    container_name: penflow-backend-prod
+    container_name: pwnflow-backend-prod
     env_file:
       - ./.env.production
     environment:
@@ -62,7 +62,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - penflow-prod-network
+      - pwnflow-prod-network
     healthcheck:
       test:
         ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
@@ -80,7 +80,7 @@ services:
         - VITE_API_BASE_URL=${FRONTEND_API_URL:-/api/v1}
         - VITE_APP_ENV=${APP_ENV:-production}
         - VITE_ENABLE_ANALYTICS=${ENABLE_ANALYTICS:-true}
-    container_name: penflow-nginx-prod
+    container_name: pwnflow-nginx-prod
     ports:
       - "80:80"
       - "443:443" # For HTTPS in production
@@ -89,7 +89,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - penflow-prod-network
+      - pwnflow-prod-network
     volumes:
       # For Let's Encrypt certificates
       - ./certbot/conf:/etc/letsencrypt
@@ -106,7 +106,7 @@ services:
       start_period: 10s
 
 networks:
-  penflow-prod-network:
+  pwnflow-prod-network:
     driver: bridge
 
 volumes:

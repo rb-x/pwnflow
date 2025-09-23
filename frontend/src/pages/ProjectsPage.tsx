@@ -216,7 +216,7 @@ export function ProjectsPage() {
         }/export/download/${jobId}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("penflow_token")}`,
+            Authorization: `Bearer ${localStorage.getItem("pwnflow_token")}`,
           },
         }
       );
@@ -225,7 +225,7 @@ export function ProjectsPage() {
 
       const blob = await response.blob();
       const file = new File([blob], filename, {
-        type: "application/x-penflow-project",
+        type: "application/x-pwnflow-project",
       });
 
       setImportInitialData({ file, password });

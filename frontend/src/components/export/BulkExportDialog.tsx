@@ -166,7 +166,7 @@ export function BulkExportDialog({
       (r) => r.status === "success" && r.downloadUrl
     );
     for (const result of successfulExports) {
-      const filename = `${result.name}.penflow-${type.slice(0, -1)}`;
+      const filename = `${result.name}.pwnflow-${type.slice(0, -1)}`;
       await exportApi.downloadFile(result.downloadUrl!, filename);
     }
   };
@@ -182,7 +182,7 @@ export function BulkExportDialog({
   };
 
   const downloadPasswordFile = () => {
-    const content = `Penflow Bulk Export Password
+    const content = `Pwnflow Bulk Export Password
 
 Password for all exports: ${generatedPassword}
 
@@ -193,7 +193,7 @@ Keep this password safe!`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "penflow-export-password.txt";
+    link.download = "pwnflow-export-password.txt";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -369,7 +369,7 @@ Keep this password safe!`;
                             onClick={async () => {
                               const filename = `${
                                 result.name
-                              }.penflow-${type.slice(0, -1)}`;
+                              }.pwnflow-${type.slice(0, -1)}`;
                               await exportApi.downloadFile(
                                 result.downloadUrl!,
                                 filename

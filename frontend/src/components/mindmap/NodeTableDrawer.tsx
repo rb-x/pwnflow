@@ -30,6 +30,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -540,31 +541,37 @@ export function NodeTableDrawer({
           side="left"
           className={cn(
             "w-full md:w-[60%] min-w-0 md:min-w-[1100px] md:max-w-[1200px] p-0",
-            "bg-background border-border",
-            "bg-background border-border",
-            "data-[state=open]:shadow-lg",
+            "border-none bg-background/90 backdrop-blur",
+            "data-[state=open]:shadow-2xl",
             "overflow-hidden flex flex-col"
           )}
         >
-          <SheetHeader className="px-6 py-4 border-b">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-4">
-                <Workflow className="h-5 w-5" />
-                <SheetTitle>Session Nodes</SheetTitle>
+          <SheetHeader className="border-b border-border/60 bg-card/70 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Workflow className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <SheetTitle className="text-base font-semibold text-foreground">
+                  Session Nodes
+                </SheetTitle>
+                <SheetDescription className="text-xs text-muted-foreground/80">
+                  Manage nodes, commands, and variables in one place
+                </SheetDescription>
               </div>
             </div>
           </SheetHeader>
 
           {/* Filters Bar */}
-          <div className="px-6 py-4 border-b space-y-4">
+          <div className="border-b border-border/60 bg-card/40 px-6 py-5 space-y-4">
             {/* View mode selector - filter buttons with counts */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
               <button
                 onClick={() => setViewMode("nodes")}
-                className={`inline-flex cursor-pointer items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 rounded-md px-3 text-xs gap-2 whitespace-nowrap ${
+                className={`inline-flex cursor-pointer items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-8 rounded-lg px-3 text-xs gap-2 whitespace-nowrap ${
                   viewMode === "nodes"
                     ? "bg-primary text-primary-foreground shadow hover:bg-primary/90"
-                    : "border border-input bg-background shadow-sm hover:bg-muted hover:text-accent-foreground"
+                    : "border border-border/60 bg-background/80 shadow-sm hover:bg-muted/40 hover:text-foreground"
                 }`}
               >
                 <ListIcon className="h-4 w-4" />
@@ -573,7 +580,7 @@ export function NodeTableDrawer({
                   className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent ml-1 ${
                     viewMode === "nodes"
                       ? "bg-primary-foreground/20 text-primary-foreground hover:bg-secondary/80"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      : "bg-secondary/40 text-secondary-foreground hover:bg-secondary/70"
                   }`}
                 >
                   {filteredAndSortedNodes.length}
@@ -706,10 +713,10 @@ export function NodeTableDrawer({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80" align="end">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-sm mb-2">
-                        Filter by Tags
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-sm mb-2">
+                    Filter by Tags
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {allTags.length > 0 ? (
@@ -813,9 +820,10 @@ export function NodeTableDrawer({
           </div>
 
           {/* Table */}
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-auto px-6 py-6">
             {viewMode === "nodes" ? (
-              <Table>
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-sm">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[300px]">
@@ -969,9 +977,11 @@ export function NodeTableDrawer({
                     })
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             ) : viewMode === "commands" ? (
-              <Table>
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-sm">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[300px]">Command</TableHead>
@@ -1183,9 +1193,11 @@ export function NodeTableDrawer({
                     ))
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             ) : (
-              <Table>
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-sm">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[200px]">Variable</TableHead>
@@ -1295,7 +1307,8 @@ export function NodeTableDrawer({
                     ))
                   )}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             )}
           </div>
 

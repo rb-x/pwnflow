@@ -680,54 +680,80 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header with search and filters */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-border/40 bg-background">
-        <div className="flex items-center gap-3 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground transform -translate-y-1/2" />
-            <Input
-              placeholder="Search assets, services, hostnames, IPs, tags..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 bg-background border-border"
-            />
-          </div>
-          
-          <div className="h-6 w-px bg-border" />
-          
-          <div className="flex items-center">
-            <Filter className="h-4 w-4 text-muted-foreground mr-2" />
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}>
-              <SelectTrigger className="w-32 h-9 border-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 shadow-none">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="not_tested">Not Tested</SelectItem>
-                <SelectItem value="testing">Testing</SelectItem>
-                <SelectItem value="clean">Clean</SelectItem>
-                <SelectItem value="vulnerable">Vulnerable</SelectItem>
-                <SelectItem value="exploitable">Exploitable</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex-shrink-0 border-b border-border/60 bg-card/40 px-6 py-5">
+        <div className="flex flex-col gap-4 rounded-xl border border-border/70 bg-background/70 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search assets, services, hostnames, IPs, tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 rounded-lg border border-border/60 bg-background/85 pl-9 text-sm"
+              />
+            </div>
 
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-10"
-              onClick={() => setImportNmapDialogOpen(true)}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Import Nmap
-            </Button>
-            <Dialog open={addAssetDialogOpen} onOpenChange={setAddAssetDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Asset
-                </Button>
-              </DialogTrigger>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
+              >
+                <SelectTrigger className="h-9 w-[150px] rounded-lg border border-border/60 bg-background/80 text-sm">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent className="w-[200px]">
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="not_tested">Not Tested</SelectItem>
+                  <SelectItem value="testing">Testing</SelectItem>
+                  <SelectItem value="clean">Clean</SelectItem>
+                  <SelectItem value="vulnerable">Vulnerable</SelectItem>
+                  <SelectItem value="exploitable">Exploitable</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-lg border border-border/60 bg-background/80"
+                  >
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuCheckboxItem
+                    checked={sortField === "target"}
+                    onCheckedChange={() => setSortField("target")}
+                  >
+                    Sort Alphabetically
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={sortField === "status"}
+                    onCheckedChange={() => setSortField("status")}
+                  >
+                    Sort by Status
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg border border-border/60 bg-background/80 text-sm"
+                onClick={() => setImportNmapDialogOpen(true)}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import Nmap
+              </Button>
+
+              <Dialog open={addAssetDialogOpen} onOpenChange={setAddAssetDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="h-9 rounded-lg text-sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Asset
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Add New Asset</DialogTitle>
@@ -1162,21 +1188,22 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
           </div>
         )}
       </div>
-      
-      {/* Edit Asset Dialog */}
-      <EditAssetDialog
-        asset={selectedAsset}
-        hostGroup={selectedHost}
-        open={editAssetDialogOpen}
-        onOpenChange={(open) => {
-          setEditAssetDialogOpen(open);
-          if (!open) {
-            setSelectedAsset(null);
-            setSelectedHost(null);
-          }
-        }}
-        projectId={projectId}
-      />
     </div>
+
+    {/* Edit Asset Dialog */}
+    <EditAssetDialog
+      asset={selectedAsset}
+      hostGroup={selectedHost}
+      open={editAssetDialogOpen}
+      onOpenChange={(open) => {
+        setEditAssetDialogOpen(open);
+        if (!open) {
+          setSelectedAsset(null);
+          setSelectedHost(null);
+        }
+      }}
+      projectId={projectId}
+    />
+  </div>
   );
 }

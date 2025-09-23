@@ -2,7 +2,7 @@ services:
   # Neo4j Database
   neo4j:
     image: neo4j:latest
-    container_name: penflow-neo4j-dev
+    container_name: pwnflow-neo4j-dev
     ports:
       - "7474:7474" # HTTP
       - "7687:7687" # Bolt
@@ -15,7 +15,7 @@ services:
       # The default database is always 'neo4j'
     restart: unless-stopped
     networks:
-      - penflow-dev-network
+      - pwnflow-dev-network
     healthcheck:
       test:
         [
@@ -30,7 +30,7 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: penflow-redis-dev
+    container_name: pwnflow-redis-dev
     ports:
       - "6379:6379"
     volumes:
@@ -38,7 +38,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
     networks:
-      - penflow-dev-network
+      - pwnflow-dev-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -48,13 +48,13 @@ services:
   # Redis UI
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: penflow-redis-commander-dev
+    container_name: pwnflow-redis-commander-dev
     ports:
       - "8081:8081"
     environment:
       - REDIS_HOSTS=local:redis:6379
     networks:
-      - penflow-dev-network
+      - pwnflow-dev-network
     depends_on:
       - redis
     restart: unless-stopped
@@ -64,7 +64,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: penflow-backend-dev
+    container_name: pwnflow-backend-dev
     ports:
       - "8000:8000"
     volumes:
@@ -87,7 +87,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - penflow-dev-network
+      - pwnflow-dev-network
     command: python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   # Frontend
@@ -95,7 +95,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: penflow-frontend-dev
+    container_name: pwnflow-frontend-dev
     ports:
       - "5173:5173"
     volumes:
@@ -108,11 +108,11 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - penflow-dev-network
+      - pwnflow-dev-network
     command: pnpm dev --host 0.0.0.0
 
 networks:
-  penflow-dev-network:
+  pwnflow-dev-network:
     driver: bridge
 
 volumes:

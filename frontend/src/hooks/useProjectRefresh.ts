@@ -13,7 +13,7 @@ export function useProjectRefresh(projectId: string) {
   const maxReconnectAttempts = 5;
 
   // Get token from localStorage directly
-  const token = localStorage.getItem("penflow_token");
+  const token = localStorage.getItem("pwnflow_token");
 
   useEffect(() => {
     if (!token || !projectId) return;

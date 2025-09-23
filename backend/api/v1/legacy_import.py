@@ -333,7 +333,7 @@ async def get_sample_legacy_format(
     This helps users understand what format is expected for import.
     """
     return {
-        "format_description": "Legacy Penflow project format",
+        "format_description": "Legacy Pwnflow project format",
         "required_fields": ["id", "name"],
         "optional_fields": ["description", "tags", "template", "flowData", "nodes", "edges"],
         "sample": {

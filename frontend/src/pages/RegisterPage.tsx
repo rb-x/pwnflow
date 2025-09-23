@@ -47,7 +47,7 @@ function BrandHeader() {
     <div className="mb-8 text-center">
       <div className="space-y-2">
         <h1 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text font-bold text-4xl tracking-tight">
-          Penflow
+          Pwnflow
         </h1>
         <p className="text-muted-foreground">
           Cybersecurity Mind Mapping Platform
@@ -274,7 +274,7 @@ export function RegisterPage() {
       });
 
       toast.success("Account created successfully!", {
-        description: "Welcome to Penflow! You can now start mapping.",
+        description: "Welcome to Pwnflow! You can now start mapping.",
       });
 
       navigate("/");

@@ -17,7 +17,7 @@ async def init_database(verbose=True):
     uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     user = os.getenv("NEO4J_USER", "neo4j")
     password = os.getenv("NEO4J_PASSWORD", "password")
-    database = os.getenv("NEO4J_DATABASE", "penflowdb")
+    database = os.getenv("NEO4J_DATABASE", "pwnflowdb")
     
     driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
     
@@ -87,7 +87,7 @@ async def init_database(verbose=True):
             # We'll create system nodes that won't interfere with user data
             ensure_schema_query = """
             // Ensure all labels exist by creating or merging system nodes
-            MERGE (systemUser:User {id: '__system__', username: '__system__', email: 'system@penflow.internal'})
+            MERGE (systemUser:User {id: '__system__', username: '__system__', email: 'system@pwnflow.internal'})
             MERGE (systemProject:Project {id: '__system_project__', name: '__System Project__', description: 'Internal system project for schema initialization'})
             MERGE (systemTemplate:Template {id: '__system_template__', name: '__System Template__', description: 'Internal system template for schema initialization'})
             MERGE (systemNode:Node {id: '__system_node__', title: '__System Node__', status: 'NOT_STARTED', x_pos: 0, y_pos: 0})

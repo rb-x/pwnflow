@@ -26,12 +26,12 @@ async def download_export(
         raise HTTPException(status_code=404, detail="Export file not found")
     
     # Determine content type based on extension
-    if filename.endswith('.penflow-project'):
-        media_type = "application/x-penflow-project"
-        download_name = "project-export.penflow-project"
-    elif filename.endswith('.penflow-template'):
-        media_type = "application/x-penflow-template"
-        download_name = "template-export.penflow-template"
+    if filename.endswith('.pwnflow-project'):
+        media_type = "application/x-pwnflow-project"
+        download_name = "project-export.pwnflow-project"
+    elif filename.endswith('.pwnflow-template'):
+        media_type = "application/x-pwnflow-template"
+        download_name = "template-export.pwnflow-template"
     else:
         media_type = "application/octet-stream"
         download_name = filename

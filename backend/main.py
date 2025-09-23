@@ -27,7 +27,7 @@ logging.basicConfig(
 async def lifespan(app: FastAPI):
     # Startup
     logger = logging.getLogger(__name__)
-    logger.info("Starting Penflow Backend")
+    logger.info("Starting Pwnflow Backend")
     logger.info(f"GOOGLE_API_KEY set: {'Yes' if settings.GOOGLE_API_KEY else 'No'}")
     if settings.GOOGLE_API_KEY:
         logger.info(f"GOOGLE_API_KEY first 10 chars: {settings.GOOGLE_API_KEY[:10]}...")
@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
             
             if user_count == 0:
                 logger.warning("No users found in database!")
-                logger.warning("Use CLI to create user: python create_user.py create admin admin@penflow.local")
+                logger.warning("Use CLI to create user: python create_user.py create admin admin@pwnflow.local")
                 logger.warning("Registration is disabled by default for security")
     except Exception as e:
         logger.error(f"Failed to create admin user: {e}")
@@ -68,8 +68,8 @@ def create_app() -> FastAPI:
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         docs_url="/docs",
         redoc_url="/redoc",
-        version="1.0.0",
-        description="Penflow API - A mind mapping platform for cybersecurity professionals",
+        version="1.1.0",
+        description="Pwnflow API - A mind mapping platform for cybersecurity professionals",
         lifespan=lifespan
     )
 
@@ -103,7 +103,7 @@ def create_app() -> FastAPI:
         """Health check endpoint to verify the service is running"""
         health_status = {
             "status": "healthy",
-            "service": "penflow-backend",
+            "service": "pwnflow-backend",
             "checks": {}
         }
         

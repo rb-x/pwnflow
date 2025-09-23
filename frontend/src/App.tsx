@@ -16,7 +16,7 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="penflow-theme">
+    <ThemeProvider defaultTheme="system" storageKey="pwnflow-theme">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         <Toaster position="bottom-right" />

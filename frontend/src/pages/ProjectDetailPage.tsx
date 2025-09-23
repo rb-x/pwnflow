@@ -47,7 +47,7 @@ export function ProjectDetailPage({
   useEffect(() => {
     if (data?.name) {
       // Update the document title to reflect the project/template name
-      document.title = `${data.name} - Penflow ${
+      document.title = `${data.name} - Pwnflow ${
         isTemplate ? "Template" : "Project"
       }`;
 

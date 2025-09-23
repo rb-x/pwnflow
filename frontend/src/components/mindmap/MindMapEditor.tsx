@@ -290,6 +290,21 @@ export function MindMapEditor({
     [setPreviewPosition]
   );
 
+  const openPreviewCentered = useCallback(
+    (nodeId: string) => {
+      setPreviewNodeId(nodeId);
+      if (reactFlowWrapper.current) {
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        const centeredX = Math.max(24, bounds.width / 2 - 240);
+        const centeredY = Math.max(24, bounds.height / 2 - 200);
+        setPreviewPosition({ x: centeredX, y: centeredY });
+      } else {
+        setPreviewPosition({ x: 80, y: 80 });
+      }
+    },
+    [setPreviewNodeId, setPreviewPosition]
+  );
+
   // Toolbar state
   const [isLocked, setIsLocked] = useState(false);
 
@@ -1435,6 +1450,7 @@ export function MindMapEditor({
     (event: React.MouseEvent, node: Node) => {
       window.location.hash = node.id;
       setSelectedNodeId(node.id);
+      useMindMapStore.getState().setDrawerOpen(false);
 
       if (reactFlowWrapper.current) {
         const bounds = reactFlowWrapper.current.getBoundingClientRect();
@@ -1806,10 +1822,9 @@ export function MindMapEditor({
           // Select the node
           setSelectedNodeId(targetNodeId);
 
-          // Open the drawer to show node details
-          if (!isTemplate) {
-            useMindMapStore.getState().setDrawerOpen(true);
-          }
+          // Default to floating preview for deep links
+          useMindMapStore.getState().setDrawerOpen(false);
+          openPreviewCentered(targetNodeId);
         }, 500); // Small delay to ensure everything is rendered
       }
     }
@@ -1820,6 +1835,7 @@ export function MindMapEditor({
     setSelectedNodeId,
     isTemplate,
     hasTargetedNode,
+    openPreviewCentered,
   ]);
 
   // Update nodes and edges when apiData changes (handle template imports)
@@ -2109,15 +2125,21 @@ export function MindMapEditor({
           />
 
           {isTemplate && (
-            <Panel position="top-left" className="flex gap-2">
-              <div className="px-3 py-2 bg-muted/95 backdrop-blur rounded-md text-sm text-muted-foreground">
-                Template (Read-only)
+            <Panel
+              position="top-left"
+              className="flex items-center gap-2 rounded-full bg-card/95 border border-border/60 px-3 py-1.5 shadow-lg backdrop-blur-sm text-sm"
+            >
+              <div className="flex items-center gap-2 text-foreground">
+                <Lock className="h-3.5 w-3.5 text-amber-500" />
+                <span className="font-medium">Template</span>
+                <span className="text-xs text-muted-foreground">Read-only</span>
               </div>
+              <div className="h-4 w-px bg-border/60" />
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={() => reactFlowInstance?.fitView({ padding: 0.2 })}
-                className="gap-2 bg-background/95 backdrop-blur"
+                className="h-7 px-3 text-xs font-medium border border-border/50 bg-background/80 hover:bg-background"
               >
                 Fit View
               </Button>
@@ -2129,9 +2151,18 @@ export function MindMapEditor({
       {/* Focus Mode Indicator */}
       {focusedNodeId && (
         <div className="absolute top-4 right-4 z-50">
-          <div className="bg-blue-500/90 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            Focus Mode Active (ESC to exit)
+          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/95 px-4 py-2 shadow-lg backdrop-blur-sm">
+            <span className="flex h-2.5 w-2.5 items-center justify-center">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Focus Mode
+              </span>
+              <span className="text-sm font-medium text-foreground">
+                Active — press ESC to exit
+              </span>
+            </div>
           </div>
         </div>
       )}

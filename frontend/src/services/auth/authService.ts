@@ -2,7 +2,7 @@ import { apiClient } from "../api/client";
 import type { User, UserCreate, Token } from "@/types";
 
 class AuthService {
-  private tokenKey = "penflow_token";
+  private tokenKey = "pwnflow_token";
 
   async login(username: string, password: string): Promise<User> {
     // OAuth2 compatible form data

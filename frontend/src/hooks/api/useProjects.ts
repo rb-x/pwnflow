@@ -90,7 +90,7 @@ export function useDeleteProject() {
       
       // Clean up chat localStorage for the deleted project
       try {
-        const chatKey = `penflow-chat-${projectId}`;
+        const chatKey = `pwnflow-chat-${projectId}`;
         localStorage.removeItem(chatKey);
       } catch (e) {
         console.warn("Failed to clean up chat storage:", e);
@@ -115,7 +115,7 @@ export function useBulkDeleteProjects() {
       // Clean up chat localStorage for all deleted projects
       result.deleted.forEach(projectId => {
         try {
-          const chatKey = `penflow-chat-${projectId}`;
+          const chatKey = `pwnflow-chat-${projectId}`;
           localStorage.removeItem(chatKey);
         } catch (e) {
           console.warn("Failed to clean up chat storage:", e);

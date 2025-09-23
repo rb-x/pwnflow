@@ -51,7 +51,7 @@ const data = {
     },
     {
       title: "Documentation",
-      url: "https://docs.penflow.sh/",
+      url: "https://docs.pwnflow.sh/",
       icon: Book,
     },
     {
@@ -130,7 +130,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </g>
           </svg>
           <span className="text-md mt-0.5 font-bold tracking-wide text-white/90">
-            Penflow
+            Pwnflow
           </span>
         </div>
       </SidebarHeader>

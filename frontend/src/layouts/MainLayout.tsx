@@ -1,5 +1,6 @@
 import React from "react";
 import { Outlet, useLocation, Link, useParams } from "react-router-dom";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
@@ -14,6 +15,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useProject } from "@/hooks/api/useProjects";
 import { useTemplate } from "@/hooks/api/useTemplates";
@@ -75,7 +77,8 @@ export function MainLayout() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="relative">
+        <SidebarEdgeToggle />
         <header className="flex h-16 shrink-0 items-center gap-2">
           <div className="flex items-center gap-2 px-9">
             <SidebarTrigger className="-ml-1" />
@@ -117,5 +120,21 @@ export function MainLayout() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function SidebarEdgeToggle() {
+  const { state, toggleSidebar } = useSidebar();
+  const Icon = state === "collapsed" ? ChevronRight : ChevronLeft;
+
+  return (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      className="absolute top-1/2 -left-2.5 z-40 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-sidebar/85 text-white/80 shadow-[0_2px_10px_rgba(15,15,15,0.45)] transition hover:border-white/20 hover:bg-sidebar/95 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:flex"
+      aria-label={state === "collapsed" ? "Expand sidebar" : "Collapse sidebar"}
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
   );
 }

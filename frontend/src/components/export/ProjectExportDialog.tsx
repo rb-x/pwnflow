@@ -114,7 +114,7 @@ export function ProjectExportDialog({
         // Download the file with authentication
         const filename = `${projectName
           .toLowerCase()
-          .replace(/\s+/g, "-")}.penflow-project`;
+          .replace(/\s+/g, "-")}.pwnflow-project`;
         await exportApi.downloadFile(result.job_id, filename);
 
         toast.success("Project exported successfully");
@@ -140,13 +140,13 @@ export function ProjectExportDialog({
       // Download the file with authentication
       const filename = `${projectName
         .toLowerCase()
-        .replace(/\s+/g, "-")}.penflow-project`;
+        .replace(/\s+/g, "-")}.pwnflow-project`;
       await exportApi.downloadFile(jobId, filename);
 
       // Also save password file
       const passwordBlob = new Blob(
         [
-          `Penflow Export Password\n\nProject: ${projectName}\nPassword: ${generatedPassword}\n\nKeep this password safe! You'll need it to import the project.`,
+          `Pwnflow Export Password\n\nProject: ${projectName}\nPassword: ${generatedPassword}\n\nKeep this password safe! You'll need it to import the project.`,
         ],
         { type: "text/plain" }
       );
@@ -169,7 +169,7 @@ export function ProjectExportDialog({
     if (onOpenImportWithData && jobId && generatedPassword) {
       const filename = `${projectName
         .toLowerCase()
-        .replace(/\s+/g, "-")}.penflow-project`;
+        .replace(/\s+/g, "-")}.pwnflow-project`;
       onOpenImportWithData(jobId, generatedPassword, filename);
       handleOpenChange(false);
     }

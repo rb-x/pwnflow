@@ -1,8 +1,8 @@
-# Penflow
+# Pwnflow
 
 🎯 **Visualize Your Security Testing & Analysis Journey**
 
-Penflow is a mind-mapping platform designed specifically for cybersecurity professionals. it helps you visualize, track, and share your security testing methodologies while maintaining complete control over your sensitive data.
+Pwnflow is a mind-mapping platform designed specifically for cybersecurity professionals. it helps you visualize, track, and share your security testing methodologies while maintaining complete control over your sensitive data.
 
 <img width="1903" height="969" alt="image" src="https://github.com/user-attachments/assets/4d965956-9ef4-4acd-87c1-dc8c65610bf9" />
 <img width="1915" height="971" alt="image" src="https://github.com/user-attachments/assets/00016f13-33f7-4cdb-995e-1b77cf54ad47" />
@@ -26,7 +26,7 @@ Penflow is a mind-mapping platform designed specifically for cybersecurity profe
 ### Import/Export
 - 📥 **Template Import**: Load methodologies from GitHub or private repositories
 - 📤 **Multiple Export Formats**: CSV and encrypted formats
-- 🔄 **Legacy Migration**: Import from previous Penflow versions
+- 🔄 **Legacy Migration**: Import from previous Pwnflow versions
 - 📦 **Bulk Operations**: Export multiple projects or templates at once
 
 ## 🏗️ Architecture
@@ -51,8 +51,8 @@ Penflow is a mind-mapping platform designed specifically for cybersecurity profe
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/rb-x/penflow.git
-cd penflow
+git clone https://github.com/rb-x/pwnflow.git
+cd pwnflow
 ```
 
 2. Make the run script executable:
@@ -123,7 +123,7 @@ python main.py    # Runs on http://localhost:8000
 ## 📁 Project Structure
 
 ```
-penflow/
+pwnflow/
 ├── frontend/           # React TypeScript application
 │   ├── src/
 │   │   ├── components/ # UI components
@@ -174,7 +174,7 @@ This will:
 
 ```bash
 # Create admin user via CLI (inside backend container)
-docker exec -it penflow-backend-prod python create_user.py create admin admin@yourcompany.com
+docker exec -it pwnflow-backend-prod python create_user.py create admin admin@yourcompany.com
 
 # Or using docker-compose:
 docker compose -f docker-compose.prod.yml exec backend python create_user.py create admin admin@yourcompany.com
@@ -188,7 +188,7 @@ docker compose -f docker-compose.prod.yml exec backend python create_user.py cre
 
 4. Additional production steps:
 
- ⚠️ Security Notice: We absolutely don't recommend exposing Penflow to the internet. If you must:
+ ⚠️ Security Notice: We absolutely don't recommend exposing Pwnflow to the internet. If you must:
   1. Whitelist trusted IP addresses through your WAF or firewall
   2. Registration is disabled by default - only manual user creation via SSH
 
@@ -202,7 +202,7 @@ docker compose -f docker-compose.prod.yml exec backend python create_user.py cre
 
 ## 🎯 Use Cases
 
-Penflow is perfect for:
+Pwnflow is perfect for:
 - **Penetration Testers**: Track methodology and findings
 - **Security Analysts**: Document investigation workflows
 - **Incident Responders**: Map out response procedures
@@ -211,7 +211,7 @@ Penflow is perfect for:
 
 ## 🛡️ Security
 
-Penflow is designed with security in mind:
+Pwnflow is designed with security in mind:
 - **Privacy-First AI**: AI features only access node titles and descriptions - never sensitive data like findings or variables
 - **Encrypted Exports**: Secure sharing with AES-256-GCM encryption
 - **Zero Telemetry**: No tracking or data collection
@@ -222,6 +222,6 @@ Created with ❤️ in 🇫🇷 by [Riadh BOUCHAHOUA (rb-x)](https://github.com/
 
 ---
 
-**Join the Penflow community and revolutionize your security testing workflow!**
+**Join the Pwnflow community and revolutionize your security testing workflow!**
 
-[Website-legacy](https://penflow.sh) | [Documentation-legacy](https://docs.penflow.sh) | [Templates-legacy](https://github.com/rb-x/penflow-templates)
+[Website-legacy](https://pwnflow.sh) | [Documentation-legacy](https://docs.pwnflow.sh) | [Templates-legacy](https://github.com/rb-x/pwnflow-templates)

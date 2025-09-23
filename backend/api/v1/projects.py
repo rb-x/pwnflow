@@ -291,7 +291,7 @@ async def preview_project_import(
 ):
     """Preview a project import file."""
     # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.penflow-project') as tmp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pwnflow-project') as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
@@ -319,11 +319,11 @@ async def import_project(
 ):
     """Import a project from file."""
     # Validate file extension
-    if not file.filename.endswith('.penflow-project'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Expected .penflow-project")
+    if not file.filename.endswith('.pwnflow-project'):
+        raise HTTPException(status_code=400, detail="Invalid file type. Expected .pwnflow-project")
     
     # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.penflow-project') as tmp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pwnflow-project') as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name

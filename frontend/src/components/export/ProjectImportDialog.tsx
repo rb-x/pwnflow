@@ -66,8 +66,8 @@ export function ProjectImportDialog({
       const file = acceptedFiles[0];
 
       // Validate file extension
-      if (!file.name.endsWith(".penflow-project")) {
-        toast.error("Invalid file type. Please select a .penflow-project file");
+      if (!file.name.endsWith(".pwnflow-project")) {
+        toast.error("Invalid file type. Please select a .pwnflow-project file");
         return;
       }
 
@@ -187,7 +187,7 @@ export function ProjectImportDialog({
         <DialogHeader>
           <DialogTitle>Import Project</DialogTitle>
           <DialogDescription>
-            Import a project from a .penflow-project file
+            Import a project from a .pwnflow-project file
           </DialogDescription>
         </DialogHeader>
 
@@ -210,7 +210,7 @@ export function ProjectImportDialog({
               <p className="text-sm font-medium">
                 {isDragActive
                   ? "Drop the file here..."
-                  : "Drop a .penflow-project file here"}
+                  : "Drop a .pwnflow-project file here"}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
                 or click to browse your files

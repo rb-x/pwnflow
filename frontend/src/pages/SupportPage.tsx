@@ -124,10 +124,10 @@ export function SupportPage() {
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-foreground">
-            Support Penflow
+            Support Pwnflow
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Help us keep Penflow free and continue building amazing features.
+            Help us keep Pwnflow free and continue building amazing features.
             Choose how you'd like to support the project.
           </p>
         </div>
@@ -166,7 +166,7 @@ export function SupportPage() {
                 </Button>
 
                 <Button
-                  onClick={() => handleExternalLink("https://coff.ee/penflow")}
+                  onClick={() => handleExternalLink("https://coff.ee/pwnflow")}
                   className="w-full h-12 text-base font-medium"
                   variant="outline"
                 >
@@ -179,7 +179,7 @@ export function SupportPage() {
               <div className="text-sm text-muted-foreground">
                 <p>Every contribution helps us:</p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Keep Penflow free for everyone</li>
+                  <li>Keep Pwnflow free for everyone</li>
                   <li>Add new features and improvements</li>
                   <li>Maintain servers and infrastructure</li>
                 </ul>
@@ -246,7 +246,7 @@ export function SupportPage() {
           <CardHeader>
             <CardTitle>Other Ways to Support</CardTitle>
             <CardDescription>
-              There are many ways to help Penflow grow
+              There are many ways to help Pwnflow grow
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -265,7 +265,7 @@ export function SupportPage() {
                   Share
                 </Badge>
                 <p className="text-sm text-muted-foreground">
-                  Share Penflow with your friends and colleagues
+                  Share Pwnflow with your friends and colleagues
                 </p>
               </div>
 

@@ -46,7 +46,7 @@ function BrandHeader() {
     <div className="mb-8 text-center">
       <div className="space-y-2">
         <h1 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text font-bold text-4xl tracking-tight">
-          Penflow
+          Pwnflow
         </h1>
         <p className="text-muted-foreground">
           Cybersecurity Mind Mapping Platform

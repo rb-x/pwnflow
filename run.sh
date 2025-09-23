@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Penflow Docker Runner Script
+# Pwnflow Docker Runner Script
 
 set -e
 
@@ -88,7 +88,7 @@ case "$1" in
 
 # API Configuration
 API_V1_STR=/api/v1
-PROJECT_NAME=Penflow
+PROJECT_NAME=Pwnflow
 
 # Security - Auto-generated for development
 SECRET_KEY=$JWT_SECRET
@@ -159,7 +159,7 @@ EOF
 
 # API Configuration
 API_V1_STR=/api/v1
-PROJECT_NAME=Penflow
+PROJECT_NAME=Pwnflow
 
 # Security - Auto-generated secure values
 SECRET_KEY=$JWT_SECRET
@@ -236,7 +236,7 @@ EOF
         echo ""
         print_warning "FIRST RUN SETUP:"
         echo "After containers start, create your first user with:"
-        echo "  docker exec -it penflow-backend python create_user.py create admin admin@yourcompany.com"
+        echo "  docker exec -it pwnflow-backend python create_user.py create admin admin@yourcompany.com"
         echo ""
 
         # Load environment variables for docker-compose substitution

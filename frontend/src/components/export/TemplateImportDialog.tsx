@@ -43,9 +43,9 @@ export function TemplateImportDialog({
       const file = acceptedFiles[0];
 
       // Validate file extension
-      if (!file.name.endsWith(".penflow-template")) {
+      if (!file.name.endsWith(".pwnflow-template")) {
         toast.error(
-          "Invalid file type. Please select a .penflow-template file"
+          "Invalid file type. Please select a .pwnflow-template file"
         );
         return;
       }
@@ -162,7 +162,7 @@ export function TemplateImportDialog({
         <DialogHeader>
           <DialogTitle>Import Template</DialogTitle>
           <DialogDescription>
-            Import a template from a .penflow-template file
+            Import a template from a .pwnflow-template file
           </DialogDescription>
         </DialogHeader>
 
@@ -185,7 +185,7 @@ export function TemplateImportDialog({
               <p className="text-sm font-medium">
                 {isDragActive
                   ? "Drop the file here..."
-                  : "Drop a .penflow-template file here"}
+                  : "Drop a .pwnflow-template file here"}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
                 or click to browse your files

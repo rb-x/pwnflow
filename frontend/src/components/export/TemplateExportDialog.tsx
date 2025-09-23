@@ -87,7 +87,7 @@ export function TemplateExportDialog({
         // Download the file with authentication
         const filename = `${templateName
           .toLowerCase()
-          .replace(/\s+/g, "-")}.penflow-template`;
+          .replace(/\s+/g, "-")}.pwnflow-template`;
         await exportApi.downloadFile(result.job_id, filename);
 
         toast.success("Template exported successfully");
@@ -118,7 +118,7 @@ export function TemplateExportDialog({
       link.href = result;
       link.download = `${templateName
         .toLowerCase()
-        .replace(/\s+/g, "-")}.penflow-template`;
+        .replace(/\s+/g, "-")}.pwnflow-template`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -126,7 +126,7 @@ export function TemplateExportDialog({
       // Also save password file
       const passwordBlob = new Blob(
         [
-          `Penflow Export Password\n\nTemplate: ${templateName}\nPassword: ${generatedPassword}\n\nKeep this password safe! You'll need it to import the template.`,
+          `Pwnflow Export Password\n\nTemplate: ${templateName}\nPassword: ${generatedPassword}\n\nKeep this password safe! You'll need it to import the template.`,
         ],
         { type: "text/plain" }
       );

@@ -263,8 +263,13 @@ CRITICAL: Relationships are the most important aspect. Analyze content deeply to
         
         return len(intersection) / len(union) if union else 0.0
     
-    async def chat(self, system_prompt: str, user_message: str) -> str:
-        """Simple chat method for general conversation"""
+    async def chat(
+        self,
+        system_prompt: str,
+        user_message: str,
+        response_mime_type: str = "text/plain"
+    ) -> Any:
+        """General chat helper. When response_mime_type is application/json, returns parsed dict."""
         request_data = {
             "contents": [{
                 "parts": [{
@@ -276,6 +281,9 @@ CRITICAL: Relationships are the most important aspect. Analyze content deeply to
                 "maxOutputTokens": 2048,
             }
         }
+
+        if response_mime_type:
+            request_data["generationConfig"]["responseMimeType"] = response_mime_type
         
         url = f"{self.base_url}/{self.model}:generateContent"
         headers = {
@@ -293,7 +301,28 @@ CRITICAL: Relationships are the most important aspect. Analyze content deeply to
                 content = candidates[0].get('content', {})
                 parts = content.get('parts', [])
                 if parts:
-                    return parts[0].get('text', 'No response generated')
+                    text = parts[0].get('text', '')
+                    if response_mime_type == "application/json":
+                        if not text:
+                            return {"reply": "", "directives": None}
+                        try:
+                            return json.loads(text, strict=False)
+                        except json.JSONDecodeError:
+                            try:
+                                sanitized = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
+                                return json.loads(sanitized, strict=False)
+                            except json.JSONDecodeError as e:
+                                logger.error(
+                                    "Gemini JSON decode error: %s | snippet=%s",
+                                    e,
+                                    (text[:500] + "...") if len(text) > 500 else text,
+                                )
+                            return {"reply": text, "directives": None}
+                    # Tag simple conversation replies so the orchestrator can branch
+                    if isinstance(result := json.loads(text, strict=False), dict):
+                        result.setdefault("mode", "general")
+                        return result
+                    return text or "No response generated"
             
             return "No response generated"
             

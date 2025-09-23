@@ -209,7 +209,7 @@ export const LegacyImportModal: React.FC<LegacyImportModalProps> = ({
                     className="hidden"
                   />
                   <p className="text-sm text-neutral-500 mt-2">
-                    Only JSON files from legacy Penflow are supported
+                    Only JSON files from legacy Pwnflow are supported
                   </p>
                 </div>
               </div>
