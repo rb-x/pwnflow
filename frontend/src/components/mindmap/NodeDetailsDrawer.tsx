@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { TipTapEditor } from "@/components/TipTapEditor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -99,7 +100,6 @@ import { cn } from "@/lib/utils";
 import type { NodeData } from "@/types";
 import type { Command as CommandType } from "@/types/api";
 import { useReactFlow } from "@xyflow/react";
-import { MarkdownRendererImproved } from "@/components/ui/markdown-renderer-improved";
 
 interface NodeDetailsDrawerProps {
   projectId: string;
@@ -163,9 +163,7 @@ export function NodeDetailsDrawer({
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
-  const [editingFindings, setEditingFindings] = useState(false);
   const [previewDescription, setPreviewDescription] = useState(true);
-  const [previewFindings, setPreviewFindings] = useState(true);
   const [localTitle, setLocalTitle] = useState("");
   const [localDescription, setLocalDescription] = useState("");
   const [localFindings, setLocalFindings] = useState("");
@@ -201,9 +199,7 @@ export function NodeDetailsDrawer({
     if (!isDrawerOpen) {
       setEditingTitle(false);
       setEditingDescription(false);
-      setEditingFindings(false);
       setPreviewDescription(true);
-      setPreviewFindings(true);
     }
   }, [isDrawerOpen]);
 
@@ -321,8 +317,6 @@ export function NodeDetailsDrawer({
         // Always start in preview mode by default
         setEditingDescription(false);
         setPreviewDescription(true);
-        setEditingFindings(false);
-        setPreviewFindings(true);
       } else {
         // Same node, only update if not currently editing to avoid overwriting user input
         if (!editingTitle) {
@@ -331,30 +325,25 @@ export function NodeDetailsDrawer({
         if (!editingDescription) {
           setLocalDescription(node.description || "");
         }
-        if (!editingFindings) {
-          setLocalFindings(node.findings || "");
-        }
+        setLocalFindings(node.findings || "");
       }
     }
     // Update the ref to the current node ID for the next render
     prevSelectedNodeIdRef.current = selectedNodeId;
-  }, [node, selectedNodeId, editingTitle, editingDescription, editingFindings]); // Re-run when node object changes
+  }, [node, selectedNodeId, editingTitle, editingDescription]); // Re-run when node object changes
 
   // Initialize finding state when finding data changes
   useEffect(() => {
     if (nodeFinding.data) {
-      // Only update local state if we're not currently editing
-      if (!editingFindings) {
-        setFindingContent(nodeFinding.data.content || "");
-      }
+      // Update local state
+      setFindingContent(nodeFinding.data.content || "");
       const date = new Date(nodeFinding.data.date);
       setFindingDate(isNaN(date.getTime()) ? new Date() : date);
-    } else if (!editingFindings) {
-      // Only clear if we're not editing
+    } else {
       setFindingContent("");
       setFindingDate(new Date());
     }
-  }, [nodeFinding.data, editingFindings]);
+  }, [nodeFinding.data]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -386,17 +375,6 @@ export function NodeDetailsDrawer({
 
         // Restore cursor position
         textarea.setSelectionRange(selectionStart, selectionEnd);
-      } else if (editingFindings) {
-        const findingsTextarea = document.querySelector(
-          'textarea[placeholder*="findings"]'
-        ) as HTMLTextAreaElement;
-        if (findingsTextarea) {
-          const selectionStart = findingsTextarea.selectionStart;
-          const selectionEnd = findingsTextarea.selectionEnd;
-
-          findingsTextarea.focus();
-          findingsTextarea.setSelectionRange(selectionStart, selectionEnd);
-        }
       }
     }
   });
@@ -796,9 +774,6 @@ export function NodeDetailsDrawer({
       if (action === "description") {
         setPreviewDescription(true);
         setEditingDescription(false);
-      } else {
-        setPreviewFindings(true);
-        setEditingFindings(false);
       }
     } else if (e.key === "Escape") {
       if (action === "title") {
@@ -808,10 +783,8 @@ export function NodeDetailsDrawer({
         // Exit edit mode and return to preview
         setEditingDescription(false);
         setPreviewDescription(true);
-      } else if (action === "findings" && editingFindings) {
-        // Exit edit mode and return to preview
-        setEditingFindings(false);
-        setPreviewFindings(true);
+      } else if (action === "findings") {
+        // No longer need to handle preview mode
       }
     }
   };
@@ -986,297 +959,96 @@ export function NodeDetailsDrawer({
                 value="description"
                 className="outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 mt-0 data-[state=active]:flex data-[state=active]:flex-col h-full"
               >
-                {editingDescription && !previewDescription ? (
-                  <div className="space-y-2 relative">
-                    <div className="relative">
-                      <Textarea
-                        ref={descriptionTextareaRef}
-                        value={localDescription}
-                        onChange={(e) =>
-                          handleDescriptionChange(e.target.value)
-                        }
-                        onKeyDown={(e) => handleKeyDown(e, "description")}
-                        placeholder="Add a description (supports Markdown)..."
-                        className="min-h-[300px] resize-none font-mono text-sm pr-20"
-                      />
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                onClick={() => {
-                                  setPreviewDescription(true);
-                                  setEditingDescription(false);
-                                }}
-                                className="h-8 w-8"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Preview (Ctrl+Enter)</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
+                <div className="space-y-2">
+                  <TipTapEditor
+                    initialContent={localDescription}
+                    onChange={handleDescriptionChange}
+                    placeholder="Add a description..."
+                    readOnly={isReadOnly}
+                  />
+                  {!isReadOnly && (
                     <p className="text-xs text-muted-foreground">
-                      Supports Markdown • Press Ctrl+Enter to preview • Changes
-                      are saved automatically
+                      Use the lock/unlock button in the toolbar to toggle edit mode • Changes are saved automatically
                     </p>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border p-4 relative">
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              onClick={() => {
-                                if (!isReadOnly) {
-                                  setEditingDescription(true);
-                                  setPreviewDescription(false);
-                                }
-                              }}
-                              disabled={isReadOnly}
-                              className="h-8 w-8"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Edit</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    {localDescription ? (
-                      <MarkdownRendererImproved content={localDescription} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        No description yet. Click Edit to add one (supports
-                        Markdown).
-                      </p>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="findings" className="mt-0 space-y-4">
-                {editingFindings && !previewFindings ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="finding-date" className="text-sm font-medium">
-                        Date:
-                      </Label>
-                      <Input
-                        id="finding-date"
-                        type="datetime-local"
-                        value={findingDate && !isNaN(findingDate.getTime()) ? findingDate.toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}
-                        onChange={(e) => {
-                          const date = new Date(e.target.value);
-                          if (!isNaN(date.getTime())) {
-                            setFindingDate(date);
-                            debouncedUpdateFinding(findingContent, date);
-                          }
-                        }}
-                        className="w-48"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const now = new Date();
-                          setFindingDate(now);
-                          debouncedUpdateFinding(findingContent, now);
-                        }}
-                      >
-                        Now
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={async () => {
-                          if (!findingContent.trim()) {
-                            toast.error("Please add some content first");
-                            return;
-                          }
-                          try {
-                            if (nodeFinding.data) {
-                              await updateFinding.mutateAsync({
-                                projectId,
-                                nodeId: selectedNodeId!,
-                                data: { content: findingContent, date: findingDate.toISOString() },
-                              });
-                            } else {
-                              await createFinding.mutateAsync({
-                                projectId,
-                                nodeId: selectedNodeId!,
-                                data: { content: findingContent, date: findingDate.toISOString() },
-                              });
-                            }
-                          } catch (error) {
-                            console.error("Manual save error:", error);
-                          }
-                        }}
-                      >
-                        Save
-                      </Button>
-                    </div>
-                    <div className="space-y-2 relative">
-                      <div className="relative">
-                        <Textarea
-                          value={findingContent}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setFindingContent(value);
-                            debouncedUpdateFinding(value, findingDate);
-                          }}
-                          onKeyDown={(e) => handleKeyDown(e, "findings")}
-                          placeholder="Add findings (supports Markdown)..."
-                          className="min-h-[300px] resize-none font-mono text-sm pr-20"
-                        />
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setPreviewFindings(true);
-                                    setEditingFindings(false);
-                                  }}
-                                  className="h-8 w-8"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Preview (Ctrl+Enter)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          {nodeFinding.data && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    onClick={async () => {
-                                      if (!selectedNodeId) return;
-                                      try {
-                                        await deleteFinding.mutateAsync({
-                                          projectId,
-                                          nodeId: selectedNodeId,
-                                        });
-                                        // Clear local state
-                                        setFindingContent("");
-                                        setFindingDate(new Date());
-                                        setPreviewFindings(true);
-                                        setEditingFindings(false);
-                                      } catch (error) {
-                                        console.error("Delete finding error:", error);
-                                      }
-                                    }}
-                                    className="h-8 w-8 hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Delete Finding</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Supports Markdown • Press Ctrl+Enter to preview • Changes
-                        are saved automatically
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border p-4 relative">
-                    <div className="absolute top-2 right-2 flex gap-1">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="finding-date" className="text-sm font-medium">
+                      Date:
+                    </Label>
+                    <Input
+                      id="finding-date"
+                      type="datetime-local"
+                      value={findingDate && !isNaN(findingDate.getTime()) ? findingDate.toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}
+                      onChange={(e) => {
+                        const date = new Date(e.target.value);
+                        if (!isNaN(date.getTime())) {
+                          setFindingDate(date);
+                          debouncedUpdateFinding(findingContent, date);
+                        }
+                      }}
+                      className="w-48"
+                      disabled={isReadOnly}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const now = new Date();
+                        setFindingDate(now);
+                        debouncedUpdateFinding(findingContent, now);
+                      }}
+                      disabled={isReadOnly}
+                    >
+                      Now
+                    </Button>
+                    {nodeFinding.data && !isReadOnly && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              size="icon"
+                              size="sm"
                               variant="outline"
-                              onClick={() => {
-                                if (!isReadOnly) {
-                                  setEditingFindings(true);
-                                  setPreviewFindings(false);
+                              onClick={async () => {
+                                if (!selectedNodeId) return;
+                                try {
+                                  await deleteFinding.mutateAsync({
+                                    projectId,
+                                    nodeId: selectedNodeId,
+                                  });
+                                  // Clear local state
+                                  setFindingContent("");
+                                  setFindingDate(new Date());
+                                } catch (error) {
+                                  console.error("Delete finding error:", error);
                                 }
                               }}
-                              disabled={isReadOnly}
-                              className="h-8 w-8"
+                              className="hover:text-destructive"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Edit</p>
+                            <p>Delete Finding</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {nodeFinding.data && !isReadOnly && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                onClick={async () => {
-                                  if (!selectedNodeId) return;
-                                  try {
-                                    await deleteFinding.mutateAsync({
-                                      projectId,
-                                      nodeId: selectedNodeId,
-                                    });
-                                    // Clear local state
-                                    setFindingContent("");
-                                    setFindingDate(new Date());
-                                  } catch (error) {
-                                    console.error("Delete finding error:", error);
-                                  }
-                                }}
-                                className="h-8 w-8 hover:text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete Finding</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-                    {nodeFinding.data && (nodeFinding.data.content || findingContent) ? (
-                      <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">
-                          Date: {findingDate && !isNaN(findingDate.getTime()) ? findingDate.toLocaleDateString() : "Invalid date"}
-                        </div>
-                        <MarkdownRendererImproved content={nodeFinding.data.content || findingContent} />
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        No findings yet. Click Edit to add them (supports
-                        Markdown).
-                      </p>
                     )}
                   </div>
-                )}
+                  <TipTapEditor
+                    initialContent={findingContent}
+                    onChange={(value) => {
+                      setFindingContent(value);
+                      debouncedUpdateFinding(value, findingDate);
+                    }}
+                    placeholder="Add findings..."
+                    readOnly={isReadOnly}
+                  />
+                </div>
               </TabsContent>
 
               <TabsContent value="commands" className="mt-0 space-y-4">

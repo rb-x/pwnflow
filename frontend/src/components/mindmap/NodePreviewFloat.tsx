@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MarkdownRendererImproved } from "@/components/ui/markdown-renderer-improved";
+import { TipTapEditor } from "@/components/TipTapEditor";
 import { CommandDisplay } from "./CommandDisplay";
 import { useProjectNodes, useUpdateNode } from "@/hooks/api/useNodes";
 import { useNodeCommands } from "@/hooks/api/useCommands";
@@ -584,9 +584,10 @@ export function NodePreviewFloat({
             <div className="flex-1 overflow-y-auto max-h-[360px]">
               <div className="p-4 space-y-3 text-sm">
                 {node.description ? (
-                  <MarkdownRendererImproved
-                    content={node.description}
-                    className="break-words whitespace-pre-wrap"
+                  <TipTapEditor
+                    initialContent={node.description}
+                    readOnly={true}
+                    placeholder=""
                   />
                 ) : (
                   <p className="text-muted-foreground italic">
@@ -604,9 +605,10 @@ export function NodePreviewFloat({
             <div className="flex-1 overflow-y-auto max-h-[360px]">
               <div className="p-4 space-y-3 text-sm">
                 {finding?.content ? (
-                  <MarkdownRendererImproved
-                    content={finding.content}
-                    className="break-words whitespace-pre-wrap"
+                  <TipTapEditor
+                    initialContent={finding.content}
+                    readOnly={true}
+                    placeholder=""
                   />
                 ) : (
                   <p className="text-muted-foreground italic">

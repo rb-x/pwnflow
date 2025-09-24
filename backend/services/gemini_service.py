@@ -319,9 +319,13 @@ CRITICAL: Relationships are the most important aspect. Analyze content deeply to
                                 )
                             return {"reply": text, "directives": None}
                     # Tag simple conversation replies so the orchestrator can branch
-                    if isinstance(result := json.loads(text, strict=False), dict):
-                        result.setdefault("mode", "general")
-                        return result
+                    try:
+                        result = json.loads(text, strict=False)
+                        if isinstance(result, dict):
+                            result.setdefault("mode", "general")
+                            return result
+                    except json.JSONDecodeError:
+                        pass
                     return text or "No response generated"
             
             return "No response generated"

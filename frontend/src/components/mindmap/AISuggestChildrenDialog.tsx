@@ -22,7 +22,7 @@ import { env } from "@/config/env";
 import { useCreateNode, useLinkNodes, useAddTag } from "@/hooks/api/useNodes";
 import { nodesApi } from "@/services/api/nodes";
 import { cn } from "@/lib/utils";
-import { MarkdownRendererImproved } from "@/components/ui/markdown-renderer-improved";
+import { TipTapEditor } from "@/components/TipTapEditor";
 
 interface CommandSuggestion {
   title: string;
@@ -346,9 +346,10 @@ export function AISuggestChildrenDialog({
                         <div className="pt-3 space-y-3">
                           {/* Description */}
                           <div className="text-sm">
-                            <MarkdownRendererImproved
-                              content={suggestion.description}
-                              className="text-muted-foreground"
+                            <TipTapEditor
+                              initialContent={suggestion.description}
+                              readOnly={true}
+                              placeholder=""
                             />
                           </div>
 
