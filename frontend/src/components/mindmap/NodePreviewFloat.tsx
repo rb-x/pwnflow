@@ -5,7 +5,11 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ComponentType, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  ComponentType,
+  PointerEvent as ReactPointerEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import {
   X,
   FileText,
@@ -19,6 +23,9 @@ import {
   HelpCircle,
   Copy,
   Maximize2,
+  Pencil,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Tabs as VercelTabs } from "@/components/ui/vercel-tabs";
@@ -31,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { TipTapEditor } from "@/components/TipTapEditor";
 import { CommandDisplay } from "./CommandDisplay";
 import { useProjectNodes, useUpdateNode } from "@/hooks/api/useNodes";
@@ -101,6 +109,10 @@ export function NodePreviewFloat({
   const [localStatus, setLocalStatus] = useState<string>("NOT_STARTED");
   const [copiedCommandId, setCopiedCommandId] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [localTitle, setLocalTitle] = useState("");
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const { data: projectData } = useProjectNodes(projectId, isTemplate);
   const updateNode = useUpdateNode();
@@ -160,6 +172,25 @@ export function NodePreviewFloat({
       setActiveTab("description");
     }
   }, [nodeId]);
+
+  useEffect(() => {
+    if (node?.title) {
+      setLocalTitle(node.title);
+    }
+  }, [node?.title]);
+
+  useEffect(() => {
+    if (isEditingTitle) {
+      const timeoutId = setTimeout(() => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          titleInputRef.current.select();
+        }
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isEditingTitle]);
 
   useEffect(() => {
     return () => {
@@ -266,6 +297,86 @@ export function NodePreviewFloat({
     [onPositionChange]
   );
 
+  const handleStartEditingTitle = useCallback(() => {
+    if (isTemplate || !node) return;
+    setLocalTitle(node.title || "");
+    setIsEditingTitle(true);
+  }, [isTemplate, node]);
+
+  const handleCancelTitle = useCallback(() => {
+    if (!node) return;
+    setLocalTitle(node.title || "");
+    setIsEditingTitle(false);
+  }, [node]);
+
+  const handleSaveTitle = useCallback(async () => {
+    if (!node || isTemplate || isSavingTitle) return;
+
+    const trimmedTitle = localTitle.trim();
+    if (!trimmedTitle) {
+      toast.error("Title cannot be empty");
+      return;
+    }
+
+    if (trimmedTitle === node.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    try {
+      setIsSavingTitle(true);
+      const updatedNode = await updateNode.mutateAsync({
+        projectId,
+        nodeId: node.id,
+        data: { title: trimmedTitle },
+      });
+
+      setNodes((flowNodes) =>
+        flowNodes.map((flowNode) =>
+          flowNode.id === node.id
+            ? {
+                ...flowNode,
+                data: {
+                  ...flowNode.data,
+                  ...updatedNode,
+                  label: updatedNode.title ?? trimmedTitle,
+                },
+              }
+            : flowNode
+        )
+      );
+
+      setLocalTitle(updatedNode.title ?? trimmedTitle);
+      setIsEditingTitle(false);
+      toast.success("Title updated");
+    } catch (error) {
+      toast.error("Failed to update title");
+    } finally {
+      setIsSavingTitle(false);
+    }
+  }, [
+    isSavingTitle,
+    isTemplate,
+    localTitle,
+    node,
+    projectId,
+    setNodes,
+    updateNode,
+  ]);
+
+  const handleTitleKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        void handleSaveTitle();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        handleCancelTitle();
+      }
+    },
+    [handleCancelTitle, handleSaveTitle]
+  );
+
   if (!nodeId || !projectData) {
     return null;
   }
@@ -276,6 +387,7 @@ export function NodePreviewFloat({
 
   const status = statusConfig[localStatus] || statusConfig.NOT_STARTED;
   const StatusIcon = status.icon;
+  const displayedTitle = node.title ?? localTitle;
 
   const resolvedPosition = clampPosition(
     position || { x: CARD_MARGIN, y: CARD_MARGIN }
@@ -433,10 +545,72 @@ export function NodePreviewFloat({
         onPointerDown={handlePointerDown}
       >
         <div className="flex flex-col gap-2 pr-8">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold leading-tight">
-              {node.title}
-            </h3>
+          <div className="flex items-center gap-2 min-w-0">
+            {isEditingTitle && !isTemplate ? (
+              <div
+                className="flex items-center gap-2 min-w-0 flex-1"
+                data-node-preview-ignore-close
+              >
+                <Input
+                  ref={titleInputRef}
+                  value={localTitle}
+                  onChange={(event) => setLocalTitle(event.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  disabled={isSavingTitle}
+                  data-node-preview-ignore-close
+                  className="h-9 flex-1 text-lg font-semibold leading-tight"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => void handleSaveTitle()}
+                  disabled={isSavingTitle || !localTitle.trim()}
+                  data-node-preview-ignore-close
+                >
+                  {isSavingTitle ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={handleCancelTitle}
+                  disabled={isSavingTitle}
+                  data-node-preview-ignore-close
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h3
+                  className="flex-1 truncate text-lg font-semibold leading-tight"
+                  title={displayedTitle}
+                  onDoubleClick={() => {
+                    if (!isTemplate) {
+                      handleStartEditingTitle();
+                    }
+                  }}
+                >
+                  {displayedTitle}
+                </h3>
+                {!isTemplate && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={handleStartEditingTitle}
+                    data-node-preview-ignore-close
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {isTemplate ? (
