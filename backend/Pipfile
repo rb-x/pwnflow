@@ -10,7 +10,7 @@ websockets = "*"
 python-dotenv = "*"
 pydantic-settings = "*"
 neo4j = "*"
-passlib = {extras = ["bcrypt"], version = "*"}
+bcrypt = "*"
 python-jose = "*"
 pydantic = {extras = ["email"], version = "*"}
 httpx = "*"

@@ -10,7 +10,7 @@ dependencies = [
     "python-dotenv",
     "pydantic-settings",
     "neo4j",
-    "passlib[bcrypt]",
+    "bcrypt>=5.0",
     "python-jose",
     "pydantic[email]",
     "httpx",
