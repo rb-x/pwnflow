@@ -8,7 +8,7 @@ import {
   Lock,
   User,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -149,13 +149,8 @@ function LoginFormCard({
       <div className="-mt-4 relative z-0 flex flex-col items-center gap-2 rounded-b-2xl border border-border bg-muted/50 p-4 pt-8 shadow-sm">
         <div className="space-y-3 text-center">
           <p className="text-muted-foreground text-xs">
-            Don&apos;t have an account?{" "}
-            <Link
-              to="/register"
-              className="text-primary hover:text-primary/80 font-medium transition-colors underline"
-            >
-              Create one
-            </Link>
+            Need access? Contact your workspace administrator to provision an
+            account.
           </p>
         </div>
       </div>

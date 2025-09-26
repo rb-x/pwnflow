@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Loader2,
   Sparkles,
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { authService } from "@/services/auth/authService";
 import { env } from "@/config/env";
-import { useCreateNode, useLinkNodes, useAddTag } from "@/hooks/api/useNodes";
+import { useCreateNode, useLinkNodes, useAddTag, useGenerateNodesWithAI } from "@/hooks/api/useNodes";
 import { nodesApi } from "@/services/api/nodes";
 import { cn } from "@/lib/utils";
 import { TipTapEditor } from "@/components/TipTapEditor";
@@ -55,6 +55,7 @@ export function AISuggestChildrenDialog({
   parentNodeTitle,
   onNodesCreated,
 }: AISuggestChildrenDialogProps) {
+
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(
@@ -64,26 +65,25 @@ export function AISuggestChildrenDialog({
   const [expandedSections, setExpandedSections] = useState<Set<number>>(
     new Set([0])
   );
+  const hasFetchedRef = useRef(false);
+  const lastParentIdRef = useRef<string | null>(null);
 
   const createNodeMutation = useCreateNode();
   const linkNodesMutation = useLinkNodes();
   const addTagMutation = useAddTag();
+  const generateNodesWithAI = useGenerateNodesWithAI();
 
   const handleClose = () => {
     // Clear suggestions when closing to ensure fresh data next time
     setSuggestions([]);
     setSelectedSuggestions(new Set());
     setExpandedSections(new Set());
+    hasFetchedRef.current = false;
+    lastParentIdRef.current = null;
     onClose();
   };
 
-  useEffect(() => {
-    if (isOpen && parentNodeId && suggestions.length === 0) {
-      fetchSuggestions();
-    }
-  }, [isOpen, parentNodeId]);
-
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     setIsLoading(true);
     setSuggestions([]);
     setSelectedSuggestions(new Set());
@@ -115,7 +115,25 @@ export function AISuggestChildrenDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [projectId, parentNodeId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      hasFetchedRef.current = false;
+      lastParentIdRef.current = null;
+      return;
+    }
+
+    if (parentNodeId && lastParentIdRef.current !== parentNodeId) {
+      hasFetchedRef.current = false;
+      lastParentIdRef.current = parentNodeId;
+    }
+
+    if (isOpen && parentNodeId && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      void fetchSuggestions();
+    }
+  }, [isOpen, parentNodeId, fetchSuggestions]);
 
   const toggleSuggestion = (index: number) => {
     const newSelected = new Set(selectedSuggestions);
@@ -144,10 +162,59 @@ export function AISuggestChildrenDialog({
     }
 
     setIsCreating(true);
-    const createdNodeIds: string[] = [];
+
 
     try {
-      // Create nodes one by one
+      // Build a prompt from selected suggestions to generate nodes via AI
+      const selectedSuggestionsData = Array.from(selectedSuggestions).map(
+        (index) => suggestions[index]
+      );
+
+      // Create a structured prompt for the AI generation endpoint
+      const prompt = `Generate the following child nodes for the parent node:
+${selectedSuggestionsData
+  .map((s) => `- ${s.title}: ${s.description.substring(0, 200)}...`)
+  .join("\n")}`;
+
+      console.log("Calling AI generation endpoint with prompt:", prompt);
+      console.log("Parent node ID:", parentNodeId);
+
+      // Use the AI generation endpoint which will create Celery tasks
+      try {
+        console.log("About to call generateNodesWithAI.mutateAsync");
+        const result = await generateNodesWithAI.mutateAsync({
+          projectId,
+          prompt,
+          parentNodeId,
+          options: {
+            max_nodes: selectedSuggestionsData.length,
+            node_types: ["concept", "tool", "technique", "vulnerability"],
+            auto_connect: true,
+          },
+        });
+
+        console.log("AI generation result:", result);
+
+        // The AI service will handle creating nodes and relationships
+        if (result.nodes && result.nodes.length > 0) {
+          toast.success(`Created ${result.nodes.length} nodes with AI`);
+          onClose();
+          return;
+        }
+      } catch (aiError: any) {
+        console.error("AI generation failed, falling back to manual:", aiError);
+        console.error("Error details:", {
+          message: aiError?.message,
+          response: aiError?.response?.data,
+          status: aiError?.response?.status
+        });
+        toast.error(`AI generation failed: ${aiError?.message || 'Unknown error'}`);
+        // Continue with fallback
+      }
+
+      // Fallback to manual creation if AI generation didn't work
+      console.log("Falling back to manual node creation");
+      const createdNodeIds: string[] = [];
       for (const index of selectedSuggestions) {
         const suggestion = suggestions[index];
 

@@ -8,17 +8,21 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pipenv
-RUN pip install pipenv
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy Pipfile and Pipfile.lock
-COPY Pipfile Pipfile.lock ./
+# Copy shared schemas so they are available for dependency installation
+COPY packages/ai-schemas ./packages/ai-schemas
+
+# Copy dependency files
+COPY backend/pyproject.toml backend/pyproject.toml
 
 # Install dependencies
-RUN pipenv install --dev --system --skip-lock
+WORKDIR /app/backend
+RUN uv pip install --system -r pyproject.toml --extra dev
 
 # Copy application code (will be overridden by volume mount)
-COPY . .
+COPY backend/ .
 
 # Expose port
 EXPOSE 8000

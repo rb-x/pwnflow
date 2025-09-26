@@ -10,7 +10,6 @@ import { TemplatesPage } from "@/pages/TemplatesPage";
 import { TemplateDetailPage } from "@/pages/TemplateDetailPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { LoginPage } from "@/pages/LoginPage";
-import { RegisterPage } from "@/pages/RegisterPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { SupportPage } from "@/pages/SupportPage";
 
@@ -18,10 +17,6 @@ export const routes: RouteObject[] = [
   {
     path: "/login",
     element: <LoginPage />,
-  },
-  {
-    path: "/register",
-    element: <RegisterPage />,
   },
   {
     path: "/",
