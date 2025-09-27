@@ -1,0 +1,28 @@
+[project]
+name = "pwnflow-ai-service"
+version = "1.0.0"
+description = "AI microservice for pwnflow"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]",
+    "uvicorn[standard]",
+    "celery[redis]",
+    "redis",
+    "google-generativeai",
+    "httpx",
+    "python-dotenv",
+    "pydantic",
+    "asyncio",
+    "flower",
+    "pwnflow-ai-schemas",
+]
+
+[tool.uv.sources]
+pwnflow-ai-schemas = { path = "../../packages/ai-schemas" }
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "black",
+]

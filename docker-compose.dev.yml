@@ -62,13 +62,14 @@ services:
   # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: backend/Dockerfile.dev
     container_name: pwnflow-backend-dev
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./packages/ai-schemas:/app/packages/ai-schemas
       - /app/.venv # Exclude virtual environment
     env_file:
       - .env.development # Use development env file
@@ -76,6 +77,7 @@ services:
       # Override database connections for Docker networking
       - NEO4J_URI=bolt://neo4j:7687
       - REDIS_URL=redis://redis:6379
+      - AI_SERVICE_URL=http://ai-service:8001
       # Python settings
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
@@ -89,6 +91,76 @@ services:
     networks:
       - pwnflow-dev-network
     command: python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # AI Microservice API
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    container_name: pwnflow-ai-service-dev
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/ai-service:/app/services/ai-service
+      - ./packages/ai-schemas:/app/packages/ai-schemas
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pwnflow-dev-network
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+  # AI Celery Worker
+  ai-worker:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    container_name: pwnflow-ai-worker-dev
+    volumes:
+      - ./services/ai-service:/app/services/ai-service
+      - ./packages/ai-schemas:/app/packages/ai-schemas
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pwnflow-dev-network
+    command: celery -A celery_app worker --loglevel=info -E
+
+  # Flower - Celery monitoring
+  flower:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    container_name: pwnflow-flower-dev
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./services/ai-service:/app/services/ai-service
+      - ./packages/ai-schemas:/app/packages/ai-schemas
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - FLOWER_UNAUTHENTICATED_API=true
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pwnflow-dev-network
+    command: celery -A celery_app flower --broker=redis://redis:6379 --port=5555
 
   # Frontend
   frontend:

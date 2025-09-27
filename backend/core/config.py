@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List, Union
+from typing import List, Union, Optional
 
 class Settings(BaseSettings):
     # API Configuration
@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    # AI Settings
-    GOOGLE_API_KEY: str
+    # AI Settings (deprecated - moved to AI microservice)
+    GOOGLE_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.0-flash"
 
     # Registration Control

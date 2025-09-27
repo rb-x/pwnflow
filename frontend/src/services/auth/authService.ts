@@ -1,5 +1,5 @@
 import { apiClient } from "../api/client";
-import type { User, UserCreate, Token } from "@/types";
+import type { User, Token } from "@/types";
 
 class AuthService {
   private tokenKey = "pwnflow_token";
@@ -25,13 +25,6 @@ class AuthService {
 
     // Get user info after login
     return this.getCurrentUser();
-  }
-
-  async register(data: UserCreate): Promise<User> {
-    const response = await apiClient.post<User>("/auth/register", data);
-    // Auto-login after registration
-    await this.login(data.username, data.password);
-    return response.data;
   }
 
   async getCurrentUser(): Promise<User> {

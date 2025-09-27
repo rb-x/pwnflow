@@ -8,14 +8,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Install Python dependencies
-COPY Pipfile ./
-RUN pip install --upgrade pip && \
-    pip install pipenv && \
-    pipenv install --system --skip-lock
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Copy shared schemas and dependency manifests
+COPY packages/ai-schemas ./packages/ai-schemas
+COPY backend/pyproject.toml backend/pyproject.toml
+
+# Install dependencies
+WORKDIR /app/backend
+RUN uv pip install --system -r pyproject.toml
 
 # Copy application code
-COPY . .
+COPY backend/ .
 
 EXPOSE 8000
 

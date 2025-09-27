@@ -478,3 +478,40 @@ export function useBulkUpdateNodePositions() {
     },
   });
 }
+
+// Generate nodes with AI using Celery tasks
+export function useGenerateNodesWithAI() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      prompt,
+      parentNodeId,
+      options = {},
+    }: {
+      projectId: string;
+      prompt: string;
+      parentNodeId?: string;
+      options?: any;
+    }) => {
+      const response = await api.post(
+        `/projects/${projectId}/ai/generate`,
+        {
+          prompt,
+          parent_node_id: parentNodeId,
+          options,
+        }
+      );
+      return response.data;
+    },
+    onSuccess: (data, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: nodeKeys.list(projectId) });
+      toast.success(`Generated ${data.nodes?.length || 0} nodes with AI`);
+    },
+    onError: (error: any) => {
+      console.error("Failed to generate nodes with AI:", error);
+      toast.error(error.response?.data?.detail || "AI generation failed");
+    },
+  });
+}

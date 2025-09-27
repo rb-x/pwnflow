@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 from datetime import datetime, timezone
 import logging
 
-from services.gemini_service import GeminiService
+from services.ai_client import ai_client
 from schemas.ai_generation import (
     AIGenerationRequest, AIGenerationResponse,
     AINode, AIRelationship, AIChatResponse, ChatMode
@@ -20,16 +20,8 @@ logger = logging.getLogger(__name__)
 class AIOrchestrator:
     def __init__(self, session: AsyncSession):
         self.session = session
-        api_key = settings.GOOGLE_API_KEY
-        
-        logger.info(f"Initializing AI Orchestrator")
-        logger.info(f"GOOGLE_API_KEY set: {'Yes' if api_key else 'No'}")
-        logger.info(f"Using API key: {'Yes' if api_key else 'No'}")
-        logger.info(f"API key first 10 chars: {api_key[:10] if api_key else 'None'}...")
-        
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY must be set")
-        self.gemini_service = GeminiService(api_key)
+        self.ai_service = ai_client
+        logger.info("Initializing AI Orchestrator with microservice")
     
     
     async def generate_and_create_nodes(
@@ -54,14 +46,13 @@ class AIOrchestrator:
             project_id, limit=50
         )
         
-        # Generate nodes and relationships with AI
-        async with self.gemini_service as service:
-            ai_response = await service.generate_nodes_with_relationships(
-                prompt=request.prompt,
-                parent_node=parent_node,
-                existing_nodes=existing_nodes,
-                options=request.options
-            )
+        # Generate nodes and relationships with AI microservice
+        ai_response = await self.ai_service.generate_nodes_with_relationships(
+            prompt=request.prompt,
+            parent_node=parent_node,
+            existing_nodes=existing_nodes,
+            options=request.options
+        )
         
         # Create nodes in the database
         created_nodes = await self._create_nodes_batch(
@@ -179,7 +170,13 @@ class AIOrchestrator:
             
             record = await result.single()
             node = dict(record["n"])
-            
+
+            # Convert Neo4j DateTime to string for serialization
+            if 'createdAt' in node and hasattr(node['createdAt'], 'iso_format'):
+                node['createdAt'] = node['createdAt'].iso_format()
+            if 'updatedAt' in node and hasattr(node['updatedAt'], 'iso_format'):
+                node['updatedAt'] = node['updatedAt'].iso_format()
+
             # Create parent relationship if specified
             if parent_node_id or ai_node.parent_id:
                 parent_id = ai_node.parent_id or parent_node_id
@@ -487,83 +484,82 @@ CRITICAL Node Creation Guidelines:
 Only populate `directives` when the user is clearly asking to create nodes (e.g., "create a node about X", "build me nodes for Y", "add nodes about Z"). Otherwise, set it to null.
 """
         
-        # Call Gemini API
-        async with self.gemini_service as service:
-            try:
-                payload = await service.chat(
-                    system_prompt=system_prompt,
-                    user_message=message,
-                    response_mime_type="application/json"
-                )
+        # Call AI microservice
+        try:
+            payload = await self.ai_service.chat(
+                system_prompt=system_prompt,
+                user_message=message,
+                response_mime_type="application/json"
+            )
 
-                directives = None
-                response_text = ""
+            directives = None
+            response_text = ""
 
-                if isinstance(payload, dict):
-                    response_text = payload.get("reply") or payload.get("message") or ""
-                    directives = payload.get("directives")
+            if isinstance(payload, dict):
+                response_text = payload.get("reply") or payload.get("message") or ""
+                directives = payload.get("directives")
 
-                    if isinstance(response_text, str):
-                        nested_candidate = response_text.strip()
-                        if nested_candidate.startswith("{") and nested_candidate.endswith("}"):
+                if isinstance(response_text, str):
+                    nested_candidate = response_text.strip()
+                    if nested_candidate.startswith("{") and nested_candidate.endswith("}"):
+                        try:
+                            nested_json = json.loads(nested_candidate, strict=False)
+                            if isinstance(nested_json, dict):
+                                directives = nested_json.get("directives", directives)
+                                response_text = nested_json.get("reply", "")
+                        except json.JSONDecodeError:
                             try:
-                                nested_json = json.loads(nested_candidate, strict=False)
+                                sanitized = nested_candidate.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
+                                nested_json = json.loads(sanitized, strict=False)
                                 if isinstance(nested_json, dict):
                                     directives = nested_json.get("directives", directives)
                                     response_text = nested_json.get("reply", "")
                             except json.JSONDecodeError:
-                                try:
-                                    sanitized = nested_candidate.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
-                                    nested_json = json.loads(sanitized, strict=False)
-                                    if isinstance(nested_json, dict):
-                                        directives = nested_json.get("directives", directives)
-                                        response_text = nested_json.get("reply", "")
-                                except json.JSONDecodeError:
-                                    pass
-                elif isinstance(payload, str):
-                    cleaned_payload = payload.strip()
-                    if cleaned_payload.startswith("{") and cleaned_payload.endswith("}"):
+                                pass
+            elif isinstance(payload, str):
+                cleaned_payload = payload.strip()
+                if cleaned_payload.startswith("{") and cleaned_payload.endswith("}"):
+                    try:
+                        parsed_payload = json.loads(cleaned_payload, strict=False)
+                        response_text = parsed_payload.get("reply", "")
+                        directives = parsed_payload.get("directives")
+                    except json.JSONDecodeError:
                         try:
-                            parsed_payload = json.loads(cleaned_payload, strict=False)
+                            sanitized = cleaned_payload
+                            sanitized = sanitized.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
+                            parsed_payload = json.loads(sanitized, strict=False)
                             response_text = parsed_payload.get("reply", "")
                             directives = parsed_payload.get("directives")
                         except json.JSONDecodeError:
-                            try:
-                                sanitized = cleaned_payload
-                                sanitized = sanitized.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")
-                                parsed_payload = json.loads(sanitized, strict=False)
-                                response_text = parsed_payload.get("reply", "")
-                                directives = parsed_payload.get("directives")
-                            except json.JSONDecodeError:
-                                response_text = cleaned_payload
-                    else:
-                        response_text = cleaned_payload
+                            response_text = cleaned_payload
                 else:
-                    response_text = str(payload or "")
+                    response_text = cleaned_payload
+            else:
+                response_text = str(payload or "")
 
-                suggestions = None
-                if isinstance(directives, dict) and directives.get("action") == "suggest_nodes":
-                    suggestions = directives.get("nodes") or []
-                    if suggestions:
-                        logger.info(f"Successfully parsed {len(suggestions)} node suggestions")
+            suggestions = None
+            if isinstance(directives, dict) and directives.get("action") == "suggest_nodes":
+                suggestions = directives.get("nodes") or []
+                if suggestions:
+                    logger.info(f"Successfully parsed {len(suggestions)} node suggestions")
 
-                # If this was casual conversation without directives, keep it short
-                final_message = response_text or ""
-                final_suggestions = suggestions
+            # If this was casual conversation without directives, keep it short
+            final_message = response_text or ""
+            final_suggestions = suggestions
 
-                if (not suggestions or len(suggestions) == 0) and mode == ChatMode.GENERAL:
-                    # For light chat, avoid structured mission brief wall of text
-                    final_message = response_text.split("\n\n###", 1)[0] if response_text else "Happy to help."
+            if (not suggestions or len(suggestions) == 0) and mode == ChatMode.GENERAL:
+                # For light chat, avoid structured mission brief wall of text
+                final_message = response_text.split("\n\n###", 1)[0] if response_text else "Happy to help."
 
-                return AIChatResponse(
-                    message=final_message,
-                    suggestions=final_suggestions,
-                    mode=mode
-                )
-                
-            except Exception as e:
-                logger.error(f"Error in AI chat: {e}")
-                raise HTTPException(500, f"AI chat failed: {str(e)}")
+            return AIChatResponse(
+                message=final_message,
+                suggestions=final_suggestions,
+                mode=mode
+            )
+
+        except Exception as e:
+            logger.error(f"Error in AI chat: {e}")
+            raise HTTPException(500, f"AI chat failed: {str(e)}")
     
     async def _get_all_project_nodes_for_chat(self, project_id: str) -> List[Dict]:
         """Get all nodes from project for chat context"""
@@ -694,78 +690,86 @@ CRITICAL JSON FORMATTING RULES:
 3. Use \\n for line breaks within description strings
 4. Ensure all JSON brackets and braces are properly matched
 5. Do not include actual line breaks inside string values"""
-        
-        async with self.gemini_service as service:
-            try:
-                # Request JSON response
-                request_data = {
-                    "contents": [{
-                        "parts": [{
-                            "text": prompt
-                        }]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.7,
-                        "maxOutputTokens": 8192,
-                        "responseMimeType": "application/json"
-                    }
+
+        try:
+            # Request JSON response
+            request_data = {
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 8192,
+                    "responseMimeType": "application/json"
                 }
-                
-                url = f"{service.base_url}/{service.model}:generateContent?key={service.api_key}"
-                response = await service.client.post(url, json=request_data)
-                response.raise_for_status()
-                
-                result = response.json()
-                candidates = result.get('candidates', [])
-                if candidates:
-                    content = candidates[0].get('content', {})
-                    parts = content.get('parts', [])
-                    if parts:
-                        response_text = parts[0].get('text', '[]')
-                        
-                        # Try to parse the JSON response
-                        try:
-                            suggestions = json.loads(response_text)
-                            
-                            # Validate it's a list
-                            if not isinstance(suggestions, list):
-                                logger.error(f"Expected list but got {type(suggestions)}")
-                                return []
-                                
-                            # Validate each suggestion has required fields
-                            valid_suggestions = []
-                            for suggestion in suggestions:
-                                if isinstance(suggestion, dict) and 'title' in suggestion and 'description' in suggestion:
-                                    valid_suggestions.append(suggestion)
-                                else:
-                                    logger.warning(f"Invalid suggestion format: {suggestion}")
-                            
-                            return valid_suggestions
-                            
-                        except json.JSONDecodeError as e:
-                            logger.error(f"JSON decode error: {e}")
-                            logger.error(f"Response text (first 500 chars): {response_text[:500]}")
-                            
-                            # Try to extract JSON if it's wrapped in markdown
-                            import re
-                            json_match = re.search(r'```json\s*\n?(.*?)\n?```', response_text, re.DOTALL)
-                            if json_match:
-                                try:
-                                    suggestions = json.loads(json_match.group(1))
-                                    if isinstance(suggestions, list):
-                                        return suggestions
-                                except:
-                                    pass
-                            
-                            return []
-                
-                return []
-                
+            }
+
+            # Use the AI microservice for child node suggestions
+            ai_response = await self.ai_service.chat(
+                system_prompt="You are an AI assistant that suggests child nodes for a mind map. Return ONLY valid JSON array.",
+                user_message=prompt,
+                response_mime_type="application/json"
+            )
+
+            # The AI service chat returns the parsed content directly
+            if isinstance(ai_response, str):
+                response_text = ai_response
+            elif isinstance(ai_response, list):
+                # Already parsed as list
+                return ai_response
+            elif isinstance(ai_response, dict):
+                # Check if it's a wrapped response with 'result' or 'reply' field
+                if 'result' in ai_response:
+                    response_text = ai_response['result']
+                elif 'reply' in ai_response:
+                    response_text = ai_response['reply']
+                else:
+                    # Assume the dict IS the suggestions
+                    response_text = json.dumps(ai_response)
+            else:
+                response_text = '[]'
+
+            # Try to parse the JSON response
+            try:
+                if isinstance(response_text, str):
+                    suggestions = json.loads(response_text)
+                else:
+                    suggestions = response_text
+
+                # Validate it's a list
+                if not isinstance(suggestions, list):
+                    # Maybe it's a single suggestion, wrap it
+                    if isinstance(suggestions, dict) and 'title' in suggestions:
+                        suggestions = [suggestions]
+                    else:
+                        logger.error(f"Expected list but got {type(suggestions)}: {suggestions}")
+                        return []
+
+                # Validate each suggestion has required fields
+                valid_suggestions = []
+                for suggestion in suggestions:
+                    if isinstance(suggestion, dict) and 'title' in suggestion and 'description' in suggestion:
+                        valid_suggestions.append(suggestion)
+                    else:
+                        logger.warning(f"Invalid suggestion format: {suggestion}")
+
+                return valid_suggestions
+
             except json.JSONDecodeError as e:
-                logger.error(f"JSON parsing error in suggest_child_nodes: {e}")
-                if 'parts' in locals() and parts:
-                    logger.error(f"Raw response text (first 1000 chars): {parts[0].get('text', '')[:1000]}")
+                logger.error(f"JSON decode error: {e}")
+                logger.error(f"Response text (first 500 chars): {response_text[:500]}")
+
+                # Just return empty list on parse error
+                # The AI service should be fixed to return proper JSON
                 return []
-            except Exception as e:
-                logger.error(f"Error suggesting child nodes: {e}")
-                return []
+
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing error in suggest_child_nodes: {e}")
+            if 'parts' in locals() and parts:
+                logger.error(f"Raw response text (first 1000 chars): {parts[0].get('text', '')[:1000]}")
+            return []
+        except Exception as e:
+            logger.error(f"Error suggesting child nodes: {e}")
+            return []

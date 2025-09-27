@@ -42,11 +42,12 @@ async def generate_ai_nodes(
     - Generates nodes with descriptions and commands
     - Creates intelligent relationships between nodes
     """
-    # Check if Gemini API key is configured
-    if not settings.GOOGLE_API_KEY:
+    # Check if AI microservice is available
+    from services.ai_client import ai_client
+    if not await ai_client.is_available():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is not configured. Please set GOOGLE_API_KEY environment variable."
+            detail="AI service is not available. Please check if the AI microservice is running."
         )
     
     # Authorize the request
@@ -83,11 +84,12 @@ async def generate_ai_nodes_stream(
     
     Returns Server-Sent Events stream for real-time updates
     """
-    # Check if Gemini API key is configured
-    if not settings.GOOGLE_API_KEY:
+    # Check if AI microservice is available
+    from services.ai_client import ai_client
+    if not await ai_client.is_available():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is not configured. Please set GOOGLE_API_KEY environment variable."
+            detail="AI service is not available. Please check if the AI microservice is running."
         )
     
     # Authorize the request
@@ -322,11 +324,12 @@ async def chat_with_ai(
     - When node_id is provided, uses node context for better responses
     - Can suggest node improvements, descriptions, or child nodes
     """
-    # Check if Gemini API key is configured
-    if not settings.GOOGLE_API_KEY:
+    # Check if AI microservice is available
+    from services.ai_client import ai_client
+    if not await ai_client.is_available():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is not configured. Please set GOOGLE_API_KEY environment variable."
+            detail="AI service is not available. Please check if the AI microservice is running."
         )
     
     # Authorize the request
@@ -402,11 +405,12 @@ async def suggest_child_nodes(
     - Suggests 3-5 relevant child nodes
     - Returns suggestions without creating them
     """
-    # Check if Gemini API key is configured
-    if not settings.GOOGLE_API_KEY:
+    # Check if AI microservice is available
+    from services.ai_client import ai_client
+    if not await ai_client.is_available():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is not configured. Please set GOOGLE_API_KEY environment variable."
+            detail="AI service is not available. Please check if the AI microservice is running."
         )
     
     # Authorize the request

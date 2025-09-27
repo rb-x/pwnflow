@@ -1,0 +1,36 @@
+[project]
+name = "pwnflow-backend"
+version = "2.0.0"
+description = "Pwnflow backend API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
+    "python-dotenv",
+    "pydantic-settings",
+    "neo4j",
+    "bcrypt>=5.0",
+    "python-jose",
+    "pydantic[email]",
+    "httpx",
+    "python-multipart",
+    "redis[hiredis]>=4.2.0",
+    "cryptography",
+    "pwnflow-ai-schemas",
+]
+
+[tool.uv.sources]
+pwnflow-ai-schemas = { path = "../packages/ai-schemas" }
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "black",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

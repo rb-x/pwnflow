@@ -1,17 +1,8 @@
 import { useState } from "react";
-import {
-  AlertCircle,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  User,
-} from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -26,140 +17,111 @@ function PasswordToggleButton({
   return (
     <Button
       aria-label={isVisible ? "Hide password" : "Show password"}
-      className="-translate-y-1/2 absolute top-1/2 right-2 h-7 w-7 p-0 transition-colors hover:bg-muted/80"
+      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/70 transition hover:text-white"
       onClick={onToggle}
-      size="sm"
+      size="icon"
       type="button"
       variant="ghost"
     >
-      {isVisible ? (
-        <EyeOff className="h-4 w-4 text-muted-foreground" />
-      ) : (
-        <Eye className="h-4 w-4 text-muted-foreground" />
-      )}
+      {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
     </Button>
   );
 }
 
 function BrandHeader() {
   return (
-    <div className="mb-8 text-center">
-      <div className="space-y-2">
-        <h1 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text font-bold text-4xl tracking-tight">
-          Pwnflow
-        </h1>
-        <p className="text-muted-foreground">
-          Cybersecurity Mind Mapping Platform
-        </p>
+    <div className="flex flex-col items-center space-y-5 text-center">
+      <div className="flex h-14 w-14 items-center justify-center">
+        <svg aria-hidden="true" className="h-8 w-8" viewBox="0 0 32 32">
+          <defs>
+            <linearGradient id="loginLogoGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.9)" />
+              <stop offset="100%" stopColor="rgba(180,190,255,0.7)" />
+            </linearGradient>
+          </defs>
+          <g fill="none" stroke="url(#loginLogoGradient)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+            <path d="M16 2L2 8l14 6 14-6-14-6Z" />
+            <path d="M2 12l14 6 14-6" />
+            <path d="M2 16l14 6 14-6" />
+          </g>
+        </svg>
       </div>
+      <h1 className="text-3xl font-semibold text-white">Login</h1>
     </div>
   );
 }
 
-function LoginFormCard({
+function LoginForm({
   onSubmit,
   isLoading,
-  error,
   showPassword,
   setShowPassword,
 }: {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
   isLoading: boolean;
-  error: string | null;
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
 }) {
   return (
-    <div className="relative">
-      <Card className="relative z-10 overflow-hidden rounded-2xl border border-border transition-all duration-300">
-        <CardContent className="relative z-20 pt-6">
-          {error && (
-            <div className="slide-in-from-top-2 mb-4 animate-in rounded-lg border border-destructive/20 bg-destructive/5 p-3 duration-300">
-              <div className="flex items-center gap-2 text-destructive text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
-          <form className="space-y-6" onSubmit={onSubmit}>
-            <div className="space-y-3">
-              <Label className="font-medium text-sm" htmlFor="username">
-                Username
-              </Label>
-              <div className="relative">
-                <User className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  autoComplete="username"
-                  className="h-11 pl-10 transition-colors focus:ring-2 focus:ring-ring focus:ring-offset-0"
-                  id="username"
-                  name="username"
-                  placeholder="Enter your username"
-                  required
-                  type="text"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label className="font-medium text-sm" htmlFor="password">
-                Password
-              </Label>
-              <div className="relative">
-                <Lock className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  autoComplete="current-password"
-                  className="h-11 pr-10 pl-10 transition-colors focus:ring-2 focus:ring-ring focus:ring-offset-0"
-                  id="password"
-                  name="password"
-                  placeholder="Enter your password"
-                  required
-                  type={showPassword ? "text" : "password"}
-                />
-                <PasswordToggleButton
-                  isVisible={showPassword}
-                  onToggle={() => setShowPassword(!showPassword)}
-                />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <button
-                className="vertical-align-middle relative inline-flex h-11 w-full cursor-pointer touch-manipulation select-none appearance-none items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-b from-primary to-primary/90 px-4 py-2 font-medium text-sm text-primary-foreground leading-5 shadow-sm transition-all duration-200 ease-out hover:from-primary/90 hover:to-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:from-primary/80 active:to-primary/70 disabled:pointer-events-none disabled:cursor-default disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
-                disabled={isLoading}
-                type="submit"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    Sign in
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Bottom section with terms */}
-      <div className="-mt-4 relative z-0 flex flex-col items-center gap-2 rounded-b-2xl border border-border bg-muted/50 p-4 pt-8 shadow-sm">
-        <div className="space-y-3 text-center">
-          <p className="text-muted-foreground text-xs">
-            Don&apos;t have an account?{" "}
-            <Link
-              to="/register"
-              className="text-primary hover:text-primary/80 font-medium transition-colors underline"
-            >
-              Create one
-            </Link>
-          </p>
+    <form className="space-y-4" onSubmit={onSubmit}>
+      <div className="space-y-1">
+        <Label className="text-sm font-medium text-white/75" htmlFor="username">
+          Username
+        </Label>
+        <div className="relative">
+          <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <Input
+            autoComplete="username"
+            className="h-11 rounded-xl border border-white/15 bg-[#0f0f0f] pr-3 pl-10 text-white placeholder:text-white/35 focus:border-white/45 focus:outline-none focus:ring-0"
+            id="username"
+            name="username"
+            placeholder="operator"
+            required
+            type="text"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="space-y-1">
+        <Label className="text-sm font-medium text-white/75" htmlFor="password">
+          Password
+        </Label>
+        <div className="relative">
+          <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <Input
+            autoComplete="current-password"
+            className="h-11 rounded-xl border border-white/15 bg-[#0f0f0f] pr-12 pl-10 text-white placeholder:text-white/35 focus:border-white/45 focus:outline-none focus:ring-0"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            required
+            type={showPassword ? "text" : "password"}
+          />
+          <PasswordToggleButton
+            isVisible={showPassword}
+            onToggle={() => setShowPassword(!showPassword)}
+          />
+        </div>
+      </div>
+
+        <button
+          className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-white/90 text-sm font-medium text-black transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-70"
+          disabled={isLoading}
+          type="submit"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          <>
+            Login
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </>
+        )}
+      </button>
+    </form>
   );
 }
 
@@ -190,16 +152,13 @@ export function LoginPage() {
 
     try {
       await login(username, password);
-
       toast.success("Welcome back!", {
         description: "You have been successfully signed in.",
       });
-
       navigate("/");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
       setFormError(errorMessage);
-
       toast.error("Login failed", {
         description: "Please check your credentials and try again.",
       });
@@ -207,17 +166,27 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-2rem)] items-center justify-center rounded-lg border bg-background shadow-xs">
-      <div className="w-full max-w-md space-y-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-black px-6 text-white">
+      <div className="w-full max-w-sm space-y-10 text-center">
         <BrandHeader />
+        <div className="space-y-6 text-left">
+          {formError || error ? (
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2.5 text-sm text-red-300">
+              {formError || error}
+            </div>
+          ) : null}
 
-        <LoginFormCard
-          error={formError || error}
-          isLoading={isLoading}
-          onSubmit={handleSubmit}
-          setShowPassword={setShowPassword}
-          showPassword={showPassword}
-        />
+          <LoginForm
+            isLoading={isLoading}
+            onSubmit={handleSubmit}
+            setShowPassword={setShowPassword}
+            showPassword={showPassword}
+          />
+        </div>
+
+        <p className="text-xs text-white/60">
+          Need access? Contact your workspace administrator.
+        </p>
       </div>
     </div>
   );

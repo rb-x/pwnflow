@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authService } from "@/services/auth/authService";
-import type { User, UserCreate } from "@/types";
+import type { User } from "@/types";
 
 interface AuthState {
   user: User | null;
@@ -9,7 +9,6 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
-  register: (data: UserCreate) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -33,30 +32,6 @@ export const useAuthStore = create<AuthState>()(
             error: error.response?.data?.detail || "Invalid credentials",
             isLoading: false,
           });
-          throw error;
-        }
-      },
-
-      register: async (data: UserCreate) => {
-        set({ isLoading: true, error: null });
-        try {
-          const user = await authService.register(data);
-          set({ user, isAuthenticated: true, isLoading: false });
-        } catch (error: any) {
-          const errorDetail = error.response?.data?.detail || "Registration failed";
-          
-          // Handle specific registration disabled error
-          if (error.response?.status === 403 && errorDetail.includes("Registration is disabled")) {
-            set({
-              error: "Registration is currently disabled. Contact your administrator to create an account.",
-              isLoading: false,
-            });
-          } else {
-            set({
-              error: errorDetail,
-              isLoading: false,
-            });
-          }
           throw error;
         }
       },
