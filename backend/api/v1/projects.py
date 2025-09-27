@@ -19,6 +19,10 @@ from schemas.user import User
 from services.export_service import ExportService
 from services.import_service import ImportService
 from services.ws_notifications import notification_manager
+from services.event_bus import (
+    emit_project_created,
+    emit_project_deleted,
+)
 from . import nodes as nodes_router
 from . import contexts as contexts_router
 from . import scope as scope_router
@@ -50,6 +54,13 @@ async def create_project(
             status_code=400,
             detail="Project could not be created. If using a template, ensure it exists and you have permission to access it.",
         )
+    await emit_project_created(
+        project_id=str(project.id),
+        name=project.name,
+        owner_id=str(project.owner_id),
+        initiator_id=str(current_user.id),
+        source="backend.projects.create",
+    )
     return project
 
 
@@ -118,7 +129,13 @@ async def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     await project_crud.delete_project(session=session, project_id=project_id, owner_id=current_user.id)
-    
+    await emit_project_deleted(
+        project_id=str(project.id),
+        name=project.name,
+        owner_id=str(project.owner_id),
+        initiator_id=str(current_user.id),
+        source="backend.projects.delete",
+    )
     return
 
 

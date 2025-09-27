@@ -1,0 +1,23 @@
+[project]
+name = "pwnflow-notification-service"
+version = "0.1.0"
+description = "Event-driven webhook dispatcher for Pwnflow"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "redis[hiredis]",
+    "httpx",
+    "pydantic",
+    "pydantic-settings",
+    "sqlmodel>=0.0.13",
+    "asyncpg",
+    "pwnflow-event-schemas",
+]
+
+[tool.uv.sources]
+pwnflow-event-schemas = { path = "packages/event-schemas" }
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

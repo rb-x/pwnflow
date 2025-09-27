@@ -41,6 +41,24 @@ services:
       retries: 5
       start_period: 10s
 
+  notification-db:
+    image: postgres:15-alpine
+    container_name: pwnflow-notification-db-prod
+    environment:
+      - POSTGRES_USER=notify
+      - POSTGRES_PASSWORD=notify
+      - POSTGRES_DB=notify
+    volumes:
+      - notification-db-data-prod:/var/lib/postgresql/data
+    networks:
+      - pwnflow-prod-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notify"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # Backend API
   backend:
     build:
@@ -54,6 +72,8 @@ services:
       - NEO4J_USER=neo4j
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:8001
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8010
+      - NOTIFICATION_SERVICE_TOKEN=${NOTIFICATION_SERVICE_TOKEN:-prod-notify-token}
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
     depends_on:
@@ -110,6 +130,26 @@ services:
       - pwnflow-prod-network
     command: celery -A celery_app worker --loglevel=warning --concurrency=2
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: pwnflow-notification-prod
+    expose:
+      - "8010"
+    environment:
+      - NOTIFICATION_REDIS_URL=redis://redis:6379
+      - NOTIFICATION_DATABASE_URL=postgresql+asyncpg://notify:notify@notification-db:5432/notify
+      - NOTIFICATION_INTERNAL_TOKEN=${NOTIFICATION_SERVICE_TOKEN:-prod-notify-token}
+    depends_on:
+      redis:
+        condition: service_healthy
+      notification-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pwnflow-prod-network
+
   # Nginx with Frontend
   nginx:
     build:
@@ -151,3 +191,4 @@ networks:
 volumes:
   neo4j-data-prod:
   redis-data-prod:
+  notification-db-data-prod:

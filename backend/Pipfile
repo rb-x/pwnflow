@@ -18,6 +18,7 @@ python-multipart = "*"
 redis = {extras = ["hiredis"], version = ">=4.2.0"}
 google-generativeai = "*"
 cryptography = "*"
+pwnflow-event-schemas = {path = "../packages/event-schemas"}
 
 [dev-packages]
 pytest = "*"

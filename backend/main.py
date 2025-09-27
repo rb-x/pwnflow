@@ -9,7 +9,7 @@ from neo4j import AsyncSession
 
 from db.database import get_driver, close_driver
 from db.redis import close_redis
-from api.v1 import auth, projects, templates, category_tags, ai_generation, legacy_import, exports
+from api.v1 import auth, projects, templates, category_tags, ai_generation, legacy_import, exports, webhooks
 from api.exception_handlers import validation_exception_handler
 from routers import websocket
 from core.config import settings
@@ -99,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(ai_generation.router, prefix=f"{settings.API_V1_STR}", tags=["ai-generation"])
     app.include_router(legacy_import.router, prefix=f"{settings.API_V1_STR}", tags=["legacy-import"])
     app.include_router(exports.router, prefix=f"{settings.API_V1_STR}/exports")
+    app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}")
     
     # WebSocket router (not under API version prefix)
     app.include_router(websocket.router, tags=["websocket"])

@@ -12,6 +12,11 @@ from crud import finding as finding_crud
 from api.dependencies import get_current_user, get_session
 from schemas.user import User
 from services.ws_notifications import notification_manager
+from services.event_bus import (
+    emit_node_created,
+    emit_node_updated,
+    emit_node_deleted,
+)
 
 # Main router for all node-related endpoints
 router = APIRouter()
@@ -75,6 +80,15 @@ async def create_node(
     
     # Send WebSocket notification
     await notification_manager.notify_project(str(project_id), "nodes_changed")
+    await emit_node_created(
+        project_id=str(project_id),
+        project_name=None,
+        node_id=str(node.id),
+        title=node.title,
+        node_type=None,
+        initiator_id=str(current_user.id),
+        source="backend.nodes.create",
+    )
     
     return node
 
@@ -94,7 +108,16 @@ async def duplicate_node(
     
     # Send WebSocket notification
     await notification_manager.notify_project(str(project_id), "nodes_changed")
-    
+    await emit_node_created(
+        project_id=str(project_id),
+        project_name=None,
+        node_id=str(node.id),
+        title=node.title,
+        node_type=None,
+        initiator_id=str(current_user.id),
+        source="backend.nodes.duplicate",
+    )
+
     return node
 
 @nodes_crud_router.get("/{node_id}", response_model=Node)
@@ -119,6 +142,8 @@ async def update_node(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    changes = node_in.dict(exclude_unset=True)
+
     updated_node = await node_crud.update_node_in_project(
         session, node_id=node_id, node_in=node_in, project_id=project_id, owner_id=current_user.id
     )
@@ -130,6 +155,17 @@ async def update_node(
         str(project_id), 
         "node_updated",
         {"node": updated_node.dict()}
+    )
+
+    await emit_node_updated(
+        project_id=str(project_id),
+        project_name=None,
+        node_id=str(updated_node.id),
+        title=updated_node.title,
+        node_type=None,
+        changes=changes,
+        initiator_id=str(current_user.id),
+        source="backend.nodes.update",
     )
     
     return updated_node
@@ -169,6 +205,12 @@ async def delete_node(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    node = await node_crud.get_node_details(
+        session, node_id=node_id, project_id=project_id, owner_id=current_user.id
+    )
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found.")
+
     success = await node_crud.delete_node_from_project(
         session, node_id=node_id, project_id=project_id, owner_id=current_user.id
     )
@@ -177,6 +219,16 @@ async def delete_node(
     
     # Send WebSocket notification
     await notification_manager.notify_project(str(project_id), "nodes_changed")
+
+    await emit_node_deleted(
+        project_id=str(project_id),
+        project_name=None,
+        node_id=str(node.id),
+        title=node.title,
+        node_type=None,
+        initiator_id=str(current_user.id),
+        source="backend.nodes.delete",
+    )
     
     return
 

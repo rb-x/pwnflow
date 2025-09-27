@@ -18,10 +18,12 @@ dependencies = [
     "redis[hiredis]>=4.2.0",
     "cryptography",
     "pwnflow-ai-schemas",
+    "pwnflow-event-schemas",
 ]
 
 [tool.uv.sources]
 pwnflow-ai-schemas = { path = "../packages/ai-schemas" }
+pwnflow-event-schemas = { path = "../packages/event-schemas" }
 
 [project.optional-dependencies]
 dev = [

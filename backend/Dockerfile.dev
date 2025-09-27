@@ -11,8 +11,9 @@ RUN apt-get update && apt-get install -y \
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy shared schemas so they are available for dependency installation
+# Copy shared packages so they are available for dependency installation
 COPY packages/ai-schemas ./packages/ai-schemas
+COPY packages/event-schemas ./packages/event-schemas
 
 # Copy dependency files
 COPY backend/pyproject.toml backend/pyproject.toml

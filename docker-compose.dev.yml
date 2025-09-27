@@ -59,6 +59,23 @@ services:
       - redis
     restart: unless-stopped
 
+  notification-db:
+    image: postgres:15-alpine
+    container_name: pwnflow-notification-db-dev
+    environment:
+      - POSTGRES_USER=notify
+      - POSTGRES_PASSWORD=notify
+      - POSTGRES_DB=notify
+    volumes:
+      - notification-db-data-dev:/var/lib/postgresql/data
+    networks:
+      - pwnflow-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notify"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Backend API
   backend:
     build:
@@ -70,6 +87,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./packages/ai-schemas:/app/packages/ai-schemas
+      - ./packages/event-schemas:/app/packages/event-schemas
       - /app/.venv # Exclude virtual environment
     env_file:
       - .env.development # Use development env file
@@ -78,6 +96,8 @@ services:
       - NEO4J_URI=bolt://neo4j:7687
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:8001
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8010
+      - NOTIFICATION_SERVICE_TOKEN=${NOTIFICATION_SERVICE_TOKEN:-dev-notify-token}
       # Python settings
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
@@ -103,6 +123,7 @@ services:
     volumes:
       - ./services/ai-service:/app/services/ai-service
       - ./packages/ai-schemas:/app/packages/ai-schemas
+      - ./packages/event-schemas:/app/packages/event-schemas
     environment:
       - REDIS_URL=redis://redis:6379
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -124,6 +145,7 @@ services:
     volumes:
       - ./services/ai-service:/app/services/ai-service
       - ./packages/ai-schemas:/app/packages/ai-schemas
+      - ./packages/event-schemas:/app/packages/event-schemas
     environment:
       - REDIS_URL=redis://redis:6379
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -149,6 +171,7 @@ services:
     volumes:
       - ./services/ai-service:/app/services/ai-service
       - ./packages/ai-schemas:/app/packages/ai-schemas
+      - ./packages/event-schemas:/app/packages/event-schemas
     environment:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
@@ -161,6 +184,29 @@ services:
     networks:
       - pwnflow-dev-network
     command: celery -A celery_app flower --broker=redis://redis:6379 --port=5555
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: pwnflow-notification-dev
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./services/notification-service:/app/services/notification-service
+      - ./packages/event-schemas:/app/packages/event-schemas
+    environment:
+      - NOTIFICATION_REDIS_URL=redis://redis:6379
+      - NOTIFICATION_DATABASE_URL=postgresql+asyncpg://notify:notify@notification-db:5432/notify
+      - NOTIFICATION_INTERNAL_TOKEN=${NOTIFICATION_SERVICE_TOKEN:-dev-notify-token}
+    depends_on:
+      redis:
+        condition: service_healthy
+      notification-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pwnflow-dev-network
 
   # Frontend
   frontend:
@@ -190,3 +236,4 @@ networks:
 volumes:
   neo4j-data-dev:
   redis-data-dev:
+  notification-db-data-dev:

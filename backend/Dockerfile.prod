@@ -13,6 +13,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Copy shared schemas and dependency manifests
 COPY packages/ai-schemas ./packages/ai-schemas
+COPY packages/event-schemas ./packages/event-schemas
 COPY backend/pyproject.toml backend/pyproject.toml
 
 # Install dependencies

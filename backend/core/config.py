@@ -30,8 +30,12 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: List[str]
 
+    # Notification Service
+    NOTIFICATION_SERVICE_URL: str = "http://notification-service:8010"
+    NOTIFICATION_SERVICE_TOKEN: str = "dev-notify-token"
+
     class Config:
-        env_file = "../.env"  # Use root .env file
+        env_file = "../.env"
         case_sensitive = True
         # Also read from environment variables
         env_file_encoding = 'utf-8'

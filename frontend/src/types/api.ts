@@ -131,6 +131,36 @@ export interface CommandUpdate {
   description?: string | null;
 }
 
+// Webhooks
+export interface Webhook {
+  id: string;
+  url: string;
+  events: string[];
+  secret?: string | null;
+  scope: "project" | "global";
+  project_id?: string | null;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface WebhookCreate {
+  url: string;
+  events: string[];
+  secret?: string | null;
+}
+
+export interface WebhookScopedCreate extends WebhookCreate {
+  scope: "project" | "global";
+  project_id?: string | null;
+}
+
+export interface WebhookUpdate {
+  url?: string;
+  events?: string[];
+  secret?: string | null;
+  is_active?: boolean;
+}
+
 // Contexts
 export interface Context {
   name: string;
