@@ -39,6 +39,7 @@ const AVAILABLE_EVENTS = [
   { id: "node.updated", label: "Node Updated" },
   { id: "node.deleted", label: "Node Deleted" },
   { id: "finding.created", label: "Finding Created" },
+  { id: "command.triggered", label: "Command Triggered" },
 ];
 
 export function ProjectWebhooksPage() {

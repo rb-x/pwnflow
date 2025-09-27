@@ -36,6 +36,13 @@ class NodeRef(BaseModel):
     type: Optional[str] = None
 
 
+class CommandRef(BaseModel):
+    id: str
+    title: Optional[str] = None
+    command: Optional[str] = None
+    description: Optional[str] = None
+
+
 class ProjectCreatedEvent(BaseEvent):
     event: Literal["project.created"] = "project.created"
     project: ProjectRef
@@ -73,12 +80,29 @@ class FindingCreatedEvent(BaseEvent):
     finding_id: str
 
 
-EventType = BaseEvent | ProjectCreatedEvent | ProjectDeletedEvent | NodeCreatedEvent | NodeUpdatedEvent | NodeDeletedEvent | FindingCreatedEvent
+class CommandTriggeredEvent(BaseEvent):
+    event: Literal["command.triggered"] = "command.triggered"
+    project: ProjectRef
+    node: NodeRef
+    command: CommandRef
+
+
+EventType = (
+    BaseEvent
+    | ProjectCreatedEvent
+    | ProjectDeletedEvent
+    | NodeCreatedEvent
+    | NodeUpdatedEvent
+    | NodeDeletedEvent
+    | FindingCreatedEvent
+    | CommandTriggeredEvent
+)
 
 __all__ = [
     "BaseEvent",
     "EventMetadata",
     "ProjectRef",
+    "CommandRef",
     "UserRef",
     "NodeRef",
     "ProjectCreatedEvent",
@@ -87,5 +111,6 @@ __all__ = [
     "NodeUpdatedEvent",
     "NodeDeletedEvent",
     "FindingCreatedEvent",
+    "CommandTriggeredEvent",
     "EventType",
 ]

@@ -35,6 +35,7 @@ const AVAILABLE_EVENTS = [
   { id: "node.updated", label: "Node Updated" },
   { id: "node.deleted", label: "Node Deleted" },
   { id: "finding.created", label: "Finding Created" },
+  { id: "command.triggered", label: "Command Triggered" },
 ];
 
 const DEFAULT_EVENTS = new Set(["node.created", "node.updated"]);

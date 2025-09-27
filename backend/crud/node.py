@@ -1,4 +1,6 @@
 from uuid import UUID
+from typing import Any, Dict, Optional
+
 from neo4j import AsyncSession
 from neo4j.time import DateTime as Neo4jDateTime
 from datetime import datetime
@@ -296,6 +298,38 @@ async def get_command_by_id(
     )
     record = await result.single()
     return Command.model_validate(record["command"]) if record else None
+
+
+async def get_command_context(
+    session: AsyncSession,
+    command_id: UUID,
+    node_id: UUID,
+    project_id: UUID,
+    owner_id: UUID,
+) -> Optional[Dict[str, Any]]:
+    query = """
+    MATCH (owner:User {id: $owner_id})-[:OWNS]->(project:Project {id: $project_id})
+    MATCH (project)-[:HAS_NODE]->(node:Node {id: $node_id})-[:HAS_COMMAND]->(command:Command {id: $command_id})
+    RETURN project, node, command
+    """
+    result = await session.run(
+        query,
+        {
+            "owner_id": str(owner_id),
+            "project_id": str(project_id),
+            "node_id": str(node_id),
+            "command_id": str(command_id),
+        },
+    )
+    record = await result.single()
+    if not record:
+        return None
+
+    project = dict(record["project"])
+    node = dict(record["node"])
+    command = dict(record["command"])
+    return {"project": project, "node": node, "command": command}
+
 
 async def update_command_in_node(
     session: AsyncSession, command_id: UUID, command_in: CommandUpdate, node_id: UUID, project_id: UUID, owner_id: UUID

@@ -13,6 +13,7 @@ from api.dependencies import get_current_user, get_session
 from schemas.user import User
 from services.ws_notifications import notification_manager
 from services.event_bus import (
+    emit_command_triggered,
     emit_node_created,
     emit_node_updated,
     emit_node_deleted,
@@ -27,8 +28,6 @@ node_tags_router = APIRouter(tags=["Node Tags"])
 node_commands_router = APIRouter(tags=["Node Commands"])
 node_findings_router = APIRouter(tags=["Node Findings"])
 node_links_router = APIRouter(tags=["Node Links"])
-
-from typing import List, Dict
 
 class NodeLink(BaseModel):
     source: str
@@ -373,6 +372,50 @@ async def delete_command_from_node(
     if not success:
         raise HTTPException(status_code=404, detail="Command not found.")
     return
+
+
+@node_commands_router.post(
+    "/{node_id}/commands/{command_id}/trigger",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_command_event(
+    project_id: UUID,
+    node_id: UUID,
+    command_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    context = await node_crud.get_command_context(
+        session,
+        command_id=command_id,
+        node_id=node_id,
+        project_id=project_id,
+        owner_id=current_user.id,
+    )
+
+    if not context:
+        raise HTTPException(status_code=404, detail="Command not found.")
+
+    project = context["project"]
+    node = context["node"]
+    command = context["command"]
+
+    await emit_command_triggered(
+        project_id=str(project_id),
+        project_name=project.get("name"),
+        node_id=str(node_id),
+        node_title=node.get("title"),
+        node_type=node.get("type"),
+        command_id=str(command_id),
+        command_title=command.get("title"),
+        command_body=command.get("command"),
+        command_description=command.get("description"),
+        initiator_id=str(current_user.id),
+        source="backend.nodes.commands.trigger",
+    )
+
+    return {"status": "triggered"}
+
 
 # Endpoints for linking nodes, now on its own router
 @node_links_router.post("/{source_node_id}/link/{target_node_id}", status_code=status.HTTP_201_CREATED)
