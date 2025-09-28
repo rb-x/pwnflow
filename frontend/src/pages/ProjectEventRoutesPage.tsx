@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Loader2,
@@ -42,7 +42,7 @@ const AVAILABLE_EVENTS = [
   { id: "command.triggered", label: "Command Triggered" },
 ];
 
-export function ProjectWebhooksPage() {
+export function ProjectEventRoutesPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 
@@ -85,7 +85,7 @@ export function ProjectWebhooksPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) {
-      toast.error("Webhook URL is required");
+      toast.error("Destination URL is required");
       return;
     }
     if (selectedEvents.size === 0) {
@@ -109,7 +109,7 @@ export function ProjectWebhooksPage() {
   const handleUpdate = async () => {
     if (!editingWebhook) return;
     if (!editingWebhook.url) {
-      toast.error("Webhook URL is required");
+      toast.error("Destination URL is required");
       return;
     }
     const updateEvents = editingWebhook.events?.length ? editingWebhook.events : [];
@@ -155,7 +155,7 @@ export function ProjectWebhooksPage() {
         </Button>
         <div className="text-left space-y-1">
           <h1 className="text-2xl font-semibold text-white">
-            Webhooks {project ? `for ${project.name}` : ""}
+            Event routing {project ? `for ${project.name}` : ""}
           </h1>
           <p className="text-sm text-white/60">
             Receive notifications when activity happens in this project.
@@ -165,25 +165,25 @@ export function ProjectWebhooksPage() {
 
       <Card className="border border-white/10 bg-[#101010]">
         <CardHeader>
-          <CardTitle className="text-white">Add Webhook</CardTitle>
+          <CardTitle className="text-white">Add Event Route</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="webhook-url">Destination URL</Label>
+              <Label htmlFor="route-url">Destination URL</Label>
               <Input
-                id="webhook-url"
-                placeholder="https://example.com/webhooks/pwnflow"
+                id="route-url"
+                placeholder="https://example.com/hooks/pwnflow"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="bg-black/40 border-white/15"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="webhook-secret">Signing Secret (optional)</Label>
+              <Label htmlFor="route-secret">Signing Secret (optional)</Label>
               <Input
-                id="webhook-secret"
-                placeholder="Used to sign webhook payloads"
+                id="route-secret"
+                placeholder="Used to sign event payloads"
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
                 className="bg-black/40 border-white/15"
@@ -216,7 +216,7 @@ export function ProjectWebhooksPage() {
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Webhook
+                  Add Route
                 </>
               )}
             </Button>
@@ -226,7 +226,7 @@ export function ProjectWebhooksPage() {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Existing webhooks</h2>
+          <h2 className="text-lg font-semibold text-white">Existing routes</h2>
           <Button variant="ghost" size="icon" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -234,7 +234,7 @@ export function ProjectWebhooksPage() {
 
         {isLoading ? (
           <div className="h-32 flex items-center justify-center text-white/60">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading webhooks
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading routes
           </div>
         ) : webhooks && webhooks.length > 0 ? (
           <div className="space-y-3">
@@ -292,7 +292,7 @@ export function ProjectWebhooksPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-white/15 bg-black/40 p-8 text-center text-sm text-white/60">
-            No webhooks configured yet.
+            No routes configured yet.
           </div>
         )}
       </div>
@@ -300,7 +300,7 @@ export function ProjectWebhooksPage() {
       <Dialog open={!!editingWebhook} onOpenChange={(open) => !open && setEditingWebhook(null)}>
         <DialogContent className="max-w-lg border border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
-            <DialogTitle>Edit webhook</DialogTitle>
+            <DialogTitle>Edit event route</DialogTitle>
           </DialogHeader>
           {editingWebhook && (
             <div className="space-y-4">

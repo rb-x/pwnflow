@@ -30,10 +30,10 @@ export function useCreateScopedWebhook() {
     mutationFn: (payload: WebhookScopedCreate) => webhooksApi.createScoped(payload),
     onSuccess: () => {
       invalidateAllWebhooks(queryClient);
-      toast.success("Webhook created");
+      toast.success("Route created");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to create webhook");
+      toast.error(error.response?.data?.detail || "Failed to create route");
     },
   });
 }
@@ -45,10 +45,10 @@ export function useUpdateScopedWebhook() {
       webhooksApi.updateScoped(id, data),
     onSuccess: () => {
       invalidateAllWebhooks(queryClient);
-      toast.success("Webhook updated");
+      toast.success("Route updated");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to update webhook");
+      toast.error(error.response?.data?.detail || "Failed to update route");
     },
   });
 }
@@ -59,10 +59,10 @@ export function useDeleteScopedWebhook() {
     mutationFn: (id: string) => webhooksApi.removeScoped(id),
     onSuccess: () => {
       invalidateAllWebhooks(queryClient);
-      toast.success("Webhook deleted");
+      toast.success("Route deleted");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to delete webhook");
+      toast.error(error.response?.data?.detail || "Failed to delete route");
     },
   });
 }

@@ -21,10 +21,10 @@ export function useCreateWebhook(projectId: string) {
     mutationFn: (payload: WebhookCreate) => webhooksApi.create(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: webhookKeys.list(projectId) });
-      toast.success("Webhook created");
+      toast.success("Route created");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to create webhook");
+      toast.error(error.response?.data?.detail || "Failed to create route");
     },
   });
 }
@@ -36,10 +36,10 @@ export function useUpdateWebhook(projectId: string) {
       webhooksApi.update(projectId, id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: webhookKeys.list(projectId) });
-      toast.success("Webhook updated");
+      toast.success("Route updated");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to update webhook");
+      toast.error(error.response?.data?.detail || "Failed to update route");
     },
   });
 }
@@ -50,10 +50,10 @@ export function useDeleteWebhook(projectId: string) {
     mutationFn: (webhookId: string) => webhooksApi.remove(projectId, webhookId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: webhookKeys.list(projectId) });
-      toast.success("Webhook deleted");
+      toast.success("Route deleted");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to delete webhook");
+      toast.error(error.response?.data?.detail || "Failed to delete route");
     },
   });
 }

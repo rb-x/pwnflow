@@ -58,7 +58,7 @@ const INITIAL_FORM: FormState = {
   events: new Set(DEFAULT_EVENTS),
 };
 
-export function WebhooksSettings() {
+export function EventRoutingSettings() {
   const { data: projects, isLoading: projectsLoading } = useProjects();
   const { data: webhooks = [], isLoading, refetch } = useWebhooks();
   const createMutation = useCreateScopedWebhook();
@@ -140,7 +140,7 @@ export function WebhooksSettings() {
 
   const handleCreate = async () => {
     if (!createForm.url.trim()) {
-      toast.error("Webhook URL is required");
+      toast.error("Destination URL is required");
       return;
     }
 
@@ -150,7 +150,7 @@ export function WebhooksSettings() {
     }
 
     if (createForm.scope === "project" && !createForm.projectId) {
-      toast.error("Select a project for project webhooks");
+      toast.error("Select a project for scoped routes");
       return;
     }
 
@@ -176,7 +176,7 @@ export function WebhooksSettings() {
   const handleUpdate = async () => {
     if (!editingWebhook) return;
     if (!editForm.url.trim()) {
-      toast.error("Webhook URL is required");
+      toast.error("Destination URL is required");
       return;
     }
     if (editForm.events.size === 0) {
@@ -201,16 +201,16 @@ export function WebhooksSettings() {
     await deleteMutation.mutateAsync(hook.id);
   };
 
-  const copyWebhookUrl = (url: string) => {
+  const copyRouteUrl = (url: string) => {
     navigator.clipboard.writeText(url);
-    toast.success("Webhook URL copied");
+    toast.success("Route endpoint copied");
   };
 
   if (projectsLoading && isLoading) {
     return (
       <Card className="border border-white/10 bg-[#0f0f0f]">
         <CardHeader>
-          <CardTitle>Webhooks</CardTitle>
+          <CardTitle>Event Routing</CardTitle>
           <CardDescription>Loading settings…</CardDescription>
         </CardHeader>
         <CardContent className="flex h-40 items-center justify-center text-white/60">
@@ -226,8 +226,8 @@ export function WebhooksSettings() {
       <CardHeader>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle className="text-white">Webhooks</CardTitle>
-            <CardDescription>Configure global and project webhook integrations.</CardDescription>
+            <CardTitle className="text-white">Event Routing</CardTitle>
+            <CardDescription>Configure global and project routing integrations.</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => refetch()}>
@@ -235,7 +235,7 @@ export function WebhooksSettings() {
             </Button>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add webhook
+              Add route
             </Button>
           </div>
         </div>
@@ -243,11 +243,11 @@ export function WebhooksSettings() {
       <CardContent className="space-y-4">
         {isLoading ? (
           <div className="flex h-32 items-center justify-center text-white/60">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading webhooks
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading routes
           </div>
         ) : webhooks.length === 0 ? (
           <div className="rounded-xl border border-dashed border-white/20 bg-black/40 p-8 text-center text-sm text-white/60">
-            No webhooks configured yet. Create a webhook to receive notifications.
+            No routes configured yet. Create a route to receive notifications.
           </div>
         ) : (
           <div className="space-y-3">
@@ -266,7 +266,7 @@ export function WebhooksSettings() {
                       <code className="rounded-lg bg-black/60 px-3 py-1 text-xs text-white/80">
                         {hook.url}
                       </code>
-                      <Button variant="ghost" size="icon" onClick={() => copyWebhookUrl(hook.url)}>
+                      <Button variant="ghost" size="icon" onClick={() => copyRouteUrl(hook.url)}>
                         <Copy className="h-4 w-4" />
                       </Button>
                       <Badge variant={hook.is_active ? "default" : "secondary"}>
@@ -317,7 +317,7 @@ export function WebhooksSettings() {
       }}>
         <DialogContent className="max-w-3xl border border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
-            <DialogTitle>Create webhook</DialogTitle>
+            <DialogTitle>Create event route</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
             <div className="space-y-2">
@@ -376,12 +376,12 @@ export function WebhooksSettings() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Destination URL</Label>
+              <Label>Destination URL</Label>
                 <Input
-                  placeholder="https://example.com/webhooks"
-                  value={createForm.url}
-                  onChange={(e) => setCreateForm((prev) => ({ ...prev, url: e.target.value }))}
-                  className="bg-black/40 border-white/15"
+                  placeholder="https://example.com/hooks"
+                value={createForm.url}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, url: e.target.value }))}
+                className="bg-black/40 border-white/15"
                 />
               </div>
               <div className="space-y-2">
@@ -419,7 +419,7 @@ export function WebhooksSettings() {
             </Button>
             <Button onClick={handleCreate} disabled={createMutation.isLoading}>
               {createMutation.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create
+              Create route
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -432,7 +432,7 @@ export function WebhooksSettings() {
       }}>
         <DialogContent className="max-w-3xl border border-white/10 bg-[#0f0f0f]">
           <DialogHeader>
-            <DialogTitle>Edit webhook</DialogTitle>
+            <DialogTitle>Edit event route</DialogTitle>
           </DialogHeader>
           {editingWebhook ? (
             <div className="space-y-6">
