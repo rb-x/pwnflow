@@ -7,6 +7,7 @@ import {
   Book,
   Info,
   Heart,
+  Settings,
 } from "lucide-react";
 import { DiscordIcon } from "@/components/icons/DiscordIcon";
 
@@ -41,6 +42,11 @@ const data = {
       title: "Templates",
       url: "/templates",
       icon: FileText,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings,
     },
   ],
   navSecondary: [

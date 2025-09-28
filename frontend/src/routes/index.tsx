@@ -8,10 +8,12 @@ import { ProjectsPage } from "@/pages/ProjectsPage";
 import { ProjectDetailPage } from "@/pages/ProjectDetailPage";
 import { TemplatesPage } from "@/pages/TemplatesPage";
 import { TemplateDetailPage } from "@/pages/TemplateDetailPage";
-import { ProfilePage } from "@/pages/ProfilePage";
+import { Navigate } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { SupportPage } from "@/pages/SupportPage";
+import { ProjectWebhooksPage } from "@/pages/ProjectWebhooksPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 
 export const routes: RouteObject[] = [
   {
@@ -56,8 +58,16 @@ export const routes: RouteObject[] = [
             ],
           },
           {
+            path: "projects/:projectId/settings/webhooks",
+            element: <ProjectWebhooksPage />,
+          },
+          {
+            path: "settings",
+            element: <SettingsPage />,
+          },
+          {
             path: "profile",
-            element: <ProfilePage />,
+            element: <Navigate to="/settings?tab=profile" replace />,
           },
           {
             path: "about",

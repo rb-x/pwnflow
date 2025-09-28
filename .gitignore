@@ -31,3 +31,7 @@ frontend/.env.production
 # Docker volumes
 neo4j-data-*/
 redis-data-*/
+
+doc-penflow
+
+*.wiki

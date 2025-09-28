@@ -24,6 +24,7 @@ import {
   Check,
   ChevronsUpDown,
   Activity,
+  Shield,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -823,6 +824,12 @@ export function ProjectsPage() {
                     >
                       <Activity className="h-4 w-4" />
                       View Progress
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate(`/settings?tab=webhooks&project=${project.id}`)}
+                    >
+                      <Shield className="h-4 w-4" />
+                      Webhooks
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
