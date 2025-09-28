@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Settings, Webhook, User, Shield } from "lucide-react";
+import { Settings, Share2, User, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { WebhooksSettings } from "@/components/settings/WebhooksSettings";
+import { EventRoutingSettings } from "@/components/settings/EventRoutingSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 
 export function SettingsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const defaultTab = searchParams.get("tab") || "webhooks";
+  const defaultTab = searchParams.get("tab") || "profile";
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
     // Update tab if URL changes
     const tab = searchParams.get("tab");
-    if (tab && ["webhooks", "profile", "security", "general"].includes(tab)) {
+    if (tab && ["profile", "security", "general", "event-routing"].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -40,10 +40,6 @@ export function SettingsPage() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
-          <TabsTrigger value="webhooks" className="flex items-center gap-2">
-            <Webhook className="h-4 w-4" />
-            Webhooks
-          </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Profile
@@ -56,11 +52,11 @@ export function SettingsPage() {
             <Settings className="h-4 w-4" />
             General
           </TabsTrigger>
+          <TabsTrigger value="event-routing" className="flex items-center gap-2">
+            <Share2 className="h-4 w-4" />
+            Event Routing
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="webhooks" className="space-y-4">
-          <WebhooksSettings />
-        </TabsContent>
 
         <TabsContent value="profile" className="space-y-4">
           <ProfileSettings />
@@ -96,6 +92,10 @@ export function SettingsPage() {
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="event-routing" className="space-y-4">
+          <EventRoutingSettings />
         </TabsContent>
       </Tabs>
     </div>

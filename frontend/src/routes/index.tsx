@@ -12,7 +12,7 @@ import { Navigate } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { SupportPage } from "@/pages/SupportPage";
-import { ProjectWebhooksPage } from "@/pages/ProjectWebhooksPage";
+import { ProjectEventRoutesPage } from "@/pages/ProjectEventRoutesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 
 export const routes: RouteObject[] = [
@@ -58,8 +58,8 @@ export const routes: RouteObject[] = [
             ],
           },
           {
-            path: "projects/:projectId/settings/webhooks",
-            element: <ProjectWebhooksPage />,
+            path: "projects/:projectId/settings/event-routing",
+            element: <ProjectEventRoutesPage />,
           },
           {
             path: "settings",
