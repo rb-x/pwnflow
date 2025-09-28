@@ -6,7 +6,6 @@ import {
   Plus,
   RefreshCw,
   Trash,
-  ShieldCheck,
   Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ import {
 import { useProject } from "@/hooks/api/useProjects";
 import type { Webhook } from "@/types";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const AVAILABLE_EVENTS = [
   { id: "project.created", label: "Project Created" },
@@ -45,6 +46,7 @@ const AVAILABLE_EVENTS = [
 export function ProjectEventRoutesPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
 
   if (!projectId) {
     return (
@@ -136,11 +138,16 @@ export function ProjectEventRoutesPage() {
     setEditingWebhook({ ...editingWebhook, events: Array.from(current) });
   };
 
-  const toggleActive = async (hook: Webhook) => {
-    await updateMutation.mutateAsync({
-      id: hook.id,
-      data: { is_active: !hook.is_active },
-    });
+  const toggleActive = async (hook: Webhook, nextState: boolean) => {
+    setPendingToggleId(hook.id);
+    try {
+      await updateMutation.mutateAsync({
+        id: hook.id,
+        data: { is_active: nextState },
+      });
+    } finally {
+      setPendingToggleId(null);
+    }
   };
 
   const handleDelete = async (hook: Webhook) => {
@@ -238,57 +245,71 @@ export function ProjectEventRoutesPage() {
           </div>
         ) : webhooks && webhooks.length > 0 ? (
           <div className="space-y-3">
-            {webhooks.map((hook) => (
-              <div
-                key={hook.id}
-                className="flex items-start justify-between rounded-2xl border border-white/10 bg-[#101010] p-4"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-white/80">
-                    <span className="font-medium break-all">{hook.url}</span>
-                    {!hook.is_active && (
-                      <Badge variant="outline" className="border-yellow-500/40 text-yellow-400">
-                        Paused
+            {webhooks.map((hook) => {
+              const isToggling = pendingToggleId === hook.id;
+              return (
+                <div
+                  key={hook.id}
+                  className="flex items-start justify-between rounded-2xl border border-white/10 bg-[#101010] p-4"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-white/80">
+                      <span className="font-medium break-all">{hook.url}</span>
+                      <Badge
+                        className={cn(
+                          "rounded-full border border-white/10 px-2 py-0.5 text-[11px] font-medium",
+                          hook.is_active
+                            ? "bg-emerald-500/15 text-emerald-200"
+                            : "bg-white/5 text-white/60"
+                        )}
+                      >
+                        {hook.is_active ? "Active" : "Paused"}
                       </Badge>
-                    )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {hook.events?.map((evt) => (
+                        <Badge key={evt} variant="secondary" className="bg-white/10 text-white/80">
+                          {evt}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {hook.events?.map((evt) => (
-                      <Badge key={evt} variant="secondary" className="bg-white/10 text-white/80">
-                        {evt}
-                      </Badge>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(hook)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={hook.is_active}
+                        onCheckedChange={(checked) => toggleActive(hook, Boolean(checked))}
+                        disabled={isToggling}
+                      />
+                      <span className="min-w-[72px] text-xs text-white/70">
+                        {isToggling ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-white/70" />
+                        ) : hook.is_active ? (
+                          "Enabled"
+                        ) : (
+                          "Disabled"
+                        )}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(hook)}
+                      disabled={deleteMutation.isLoading}
+                    >
+                      <Trash className="h-4 w-4 text-red-400" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(hook)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleActive(hook)}
-                    disabled={updateMutation.isLoading}
-                  >
-                    <ShieldCheck
-                      className={`h-4 w-4 ${hook.is_active ? "text-emerald-400" : "text-white/40"}`}
-                    />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(hook)}
-                    disabled={deleteMutation.isLoading}
-                  >
-                    <Trash className="h-4 w-4 text-red-400" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-white/15 bg-black/40 p-8 text-center text-sm text-white/60">

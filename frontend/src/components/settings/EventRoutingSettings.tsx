@@ -5,7 +5,6 @@ import {
   Loader2,
   Plus,
   RefreshCw,
-  Shield,
   Trash,
 } from "lucide-react";
 
@@ -17,6 +16,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 import { useProjects } from "@/hooks/api/useProjects";
 import {
@@ -64,6 +65,7 @@ export function EventRoutingSettings() {
   const createMutation = useCreateScopedWebhook();
   const updateMutation = useUpdateScopedWebhook();
   const deleteMutation = useDeleteScopedWebhook();
+  const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
 
   const projectLookup = useMemo(() => {
     if (!projects) return new Map<string, string>();
@@ -166,11 +168,16 @@ export function EventRoutingSettings() {
     resetCreateForm();
   };
 
-  const handleToggleActive = async (hook: Webhook) => {
-    await updateMutation.mutateAsync({
-      id: hook.id,
-      data: { is_active: !hook.is_active },
-    });
+  const handleToggleActive = async (hook: Webhook, nextState: boolean) => {
+    setPendingToggleId(hook.id);
+    try {
+      await updateMutation.mutateAsync({
+        id: hook.id,
+        data: { is_active: nextState },
+      });
+    } finally {
+      setPendingToggleId(null);
+    }
   };
 
   const handleUpdate = async () => {
@@ -253,6 +260,7 @@ export function EventRoutingSettings() {
           <div className="space-y-3">
             {webhooks.map((hook) => {
               const projectName = hook.project_id ? projectLookup.get(hook.project_id) : null;
+              const isToggling = pendingToggleId === hook.id;
               return (
                 <div
                   key={hook.id}
@@ -269,8 +277,15 @@ export function EventRoutingSettings() {
                       <Button variant="ghost" size="icon" onClick={() => copyRouteUrl(hook.url)}>
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Badge variant={hook.is_active ? "default" : "secondary"}>
-                        {hook.is_active ? "Active" : "Inactive"}
+                      <Badge
+                        className={cn(
+                          "rounded-full border border-white/10 px-2 py-0.5 text-[11px] font-medium",
+                          hook.is_active
+                            ? "bg-emerald-500/15 text-emerald-200"
+                            : "bg-white/5 text-white/60"
+                        )}
+                      >
+                        {hook.is_active ? "Active" : "Paused"}
                       </Badge>
                     </div>
                     <div className="flex flex-wrap gap-1">
@@ -285,14 +300,22 @@ export function EventRoutingSettings() {
                     <Button variant="ghost" size="icon" onClick={() => setEditingWebhook(hook)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleToggleActive(hook)}
-                      disabled={updateMutation.isLoading}
-                    >
-                      <Shield className={`h-4 w-4 ${hook.is_active ? "text-emerald-400" : "text-white/40"}`} />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={hook.is_active}
+                        onCheckedChange={(checked) => handleToggleActive(hook, Boolean(checked))}
+                        disabled={isToggling}
+                      />
+                      <span className="min-w-[72px] text-xs text-white/70">
+                        {isToggling ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-white/70" />
+                        ) : hook.is_active ? (
+                          "Enabled"
+                        ) : (
+                          "Disabled"
+                        )}
+                      </span>
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
