@@ -72,10 +72,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useProjectNodes, useDeleteNode } from "@/hooks/api/useNodes";
-import { useProjectContexts, useProjectOrTemplateContexts } from "@/hooks/api/useContexts";
+import { useProjectOrTemplateContexts } from "@/hooks/api/useContexts";
 import { useNodeTableStore } from "@/store/nodeTableStore";
-import { useMindMapStore } from "@/store/mindMapStore";
-import { useReactFlow } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { Node as NodeType, Context, Variable } from "@/types/api";
 import { toast } from "sonner";
@@ -94,6 +92,7 @@ import {
   exportCommandsToCSV,
   exportVariablesToCSV,
 } from "@/utils/csvExport";
+import { useNavigateToNode } from "@/hooks/useNavigateToNode";
 
 interface NodeTableDrawerProps {
   projectId: string;
@@ -155,8 +154,7 @@ export function NodeTableDrawer({
     reset,
   } = useNodeTableStore();
 
-  const { setSelectedNodeId, setDrawerOpen } = useMindMapStore();
-  const { setCenter, getNode } = useReactFlow();
+  const navigateToNode = useNavigateToNode();
   const deleteNode = useDeleteNode();
 
   const { data: projectData, isLoading } = useProjectNodes(
@@ -409,18 +407,12 @@ export function NodeTableDrawer({
   // Handle node click - focus and open details
   const handleNodeClick = useCallback(
     (nodeId: string) => {
-      const reactFlowNode = getNode(nodeId);
-      if (reactFlowNode) {
-        setCenter(reactFlowNode.position.x, reactFlowNode.position.y, {
-          zoom: 1.5,
-          duration: 800,
-        });
-        setSelectedNodeId(nodeId);
-        setDrawerOpen(true);
+      const navigated = navigateToNode(nodeId);
+      if (navigated) {
         setOpen(false); // Close the table drawer
       }
     },
-    [getNode, setCenter, setSelectedNodeId, setDrawerOpen, setOpen]
+    [navigateToNode, setOpen]
   );
 
   // Handle node deletion

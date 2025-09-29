@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Sheet,
   SheetContent,
@@ -35,6 +35,8 @@ import { format, formatDistanceToNow, isToday, isYesterday, startOfDay, isWithin
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { useNavigateToNode } from "@/hooks/useNavigateToNode";
+import { toast } from "sonner";
 
 interface TimelineEvent {
   finding_id?: string;
@@ -68,6 +70,7 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [severityFilter, setSeverityFilter] = useState<"all" | "critical" | "high" | "medium" | "low" | "info">("all");
+  const navigateToNode = useNavigateToNode();
 
   useEffect(() => {
     if (open && projectId) {
@@ -458,8 +461,17 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
                                       className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-primary/10"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        // TODO: Navigate to node or open node details
-                                        console.log('Navigate to node:', event.node_id || event.nodeId);
+                                        const targetNodeId = event.node_id || event.nodeId;
+                                        if (!targetNodeId) return;
+
+                                        const navigated = navigateToNode(targetNodeId, {
+                                          onNotFound: () =>
+                                            toast.error("Node not found in current mind map"),
+                                        });
+
+                                        if (navigated) {
+                                          onOpenChange(false);
+                                        }
                                       }}
                                     >
                                       <ExternalLink className="h-3 w-3 mr-1" />
