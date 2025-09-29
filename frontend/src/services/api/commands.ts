@@ -69,14 +69,4 @@ export const commandsService = {
       `/projects/${projectId}/nodes/${nodeId}/commands/${commandId}`
     );
   },
-
-  async executeCommand(
-    projectId: string,
-    nodeId: string,
-    commandId: string
-  ): Promise<void> {
-    await apiClient.post(
-      `/projects/${projectId}/nodes/${nodeId}/commands/${commandId}/trigger`
-    );
-  },
 };

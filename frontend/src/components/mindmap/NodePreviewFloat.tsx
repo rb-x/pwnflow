@@ -26,7 +26,6 @@ import {
   Pencil,
   Check,
   Loader2,
-  Play,
 } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Tabs as VercelTabs } from "@/components/ui/vercel-tabs";
@@ -43,7 +42,7 @@ import { Input } from "@/components/ui/input";
 import { TipTapEditor } from "@/components/TipTapEditor";
 import { CommandDisplay } from "./CommandDisplay";
 import { useProjectNodes, useUpdateNode } from "@/hooks/api/useNodes";
-import { useNodeCommands, useExecuteCommand } from "@/hooks/api/useCommands";
+import { useNodeCommands } from "@/hooks/api/useCommands";
 import { useNodeFinding } from "@/hooks/api/useFindings";
 import { useProjectContexts } from "@/hooks/api/useContexts";
 import { cn } from "@/lib/utils";
@@ -117,7 +116,6 @@ export function NodePreviewFloat({
 
   const { data: projectData } = useProjectNodes(projectId, isTemplate);
   const updateNode = useUpdateNode();
-  const executeCommand = useExecuteCommand();
   const { setNodes } = useReactFlow();
 
   const node = useMemo(() => {
@@ -490,24 +488,6 @@ export function NodePreviewFloat({
     [isTemplate, resolveCommandVariables]
   );
 
-  const handleExecuteCommand = useCallback(
-    async (commandId: string) => {
-      if (!nodeId || isTemplate) return;
-
-      try {
-        await executeCommand.mutateAsync({
-          projectId,
-          nodeId,
-          commandId,
-        });
-        toast.success("Command execution triggered");
-      } catch (error) {
-        toast.error("Failed to execute command");
-      }
-    },
-    [nodeId, isTemplate, projectId, executeCommand]
-  );
-
   const handleStatusChange = async (nextStatus: string) => {
     if (!node) return;
     const previousStatus = localStatus;
@@ -853,17 +833,6 @@ export function NodePreviewFloat({
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
-                          {!isTemplate && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 shrink-0"
-                              onClick={() => handleExecuteCommand(command.id)}
-                              title="Execute command"
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                         {copiedCommandId === command.id && (
                           <div className="absolute -top-3 right-0 rounded bg-foreground/90 px-2 py-0.5 text-[11px] font-medium text-background shadow-sm">

@@ -133,24 +133,3 @@ export function useDeleteCommand() {
     },
   });
 }
-
-export function useExecuteCommand() {
-  return useMutation({
-    mutationFn: ({
-      projectId,
-      nodeId,
-      commandId,
-    }: {
-      projectId: string;
-      nodeId: string;
-      commandId: string;
-    }) => commandsService.executeCommand(projectId, nodeId, commandId),
-    onSuccess: () => {
-      toast.success("Command event dispatched");
-    },
-    onError: (error: any) => {
-      const detail = error.response?.data?.detail;
-      toast.error(detail || "Failed to dispatch command event");
-    },
-  });
-}

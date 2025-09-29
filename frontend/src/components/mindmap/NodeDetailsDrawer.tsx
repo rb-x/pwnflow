@@ -15,7 +15,6 @@ import {
   Copy,
   Trash2,
   Eye,
-  Play,
   Pencil,
   AlertCircle,
   Trash,
@@ -85,7 +84,6 @@ import {
   useCreateCommand,
   useUpdateCommand,
   useDeleteCommand,
-  useExecuteCommand,
 } from "@/hooks/api/useCommands";
 import { useProjectContexts } from "@/hooks/api/useContexts";
 import {
@@ -146,7 +144,6 @@ export function NodeDetailsDrawer({
   const createCommand = useCreateCommand();
   const updateCommand = useUpdateCommand();
   const deleteCommand = useDeleteCommand();
-  const executeCommand = useExecuteCommand();
 
   // Finding hooks
   const nodeFinding = useNodeFinding(projectId, selectedNodeId || "", {
@@ -738,20 +735,6 @@ export function NodeDetailsDrawer({
   };
 
   // Handle execute command
-  const handleExecuteCommand = async (commandId: string) => {
-    if (!selectedNodeId) return;
-
-    try {
-      await executeCommand.mutateAsync({
-        projectId,
-        nodeId: selectedNodeId,
-        commandId,
-      });
-    } catch (error) {
-      // Error toast is handled by the hook
-    }
-  };
-
   // Listen for context modal event
   useEffect(() => {
     const handleOpenContextModal = () => {
@@ -1179,15 +1162,6 @@ export function NodeDetailsDrawer({
                                   </Button>
                                   {!isReadOnly && (
                                     <>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleExecuteCommand(cmd.id)}
-                                        className="h-8 w-8"
-                                        title="Execute command"
-                                      >
-                                        <Play className="h-4 w-4" />
-                                      </Button>
                                       <Button
                                         variant="ghost"
                                         size="icon"
