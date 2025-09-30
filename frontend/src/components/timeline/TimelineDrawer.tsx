@@ -262,7 +262,7 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
         side="right"
         className="w-[420px] max-w-[92vw] border-none p-0 bg-background/95 backdrop-blur"
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full min-h-0">
           <SheetHeader className="space-y-2 border-b border-border/60 bg-card/60 px-6 py-5">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -343,7 +343,7 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
           </div>
 
           {/* Timeline Content */}
-          <ScrollArea className="flex-1 px-5 py-5">
+          <ScrollArea className="flex-1 min-h-0 px-5 py-5">
             {loading ? (
               <div className="flex h-32 items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground shadow-inner">
                 Loading timeline…
