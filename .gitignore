@@ -14,6 +14,19 @@ Thumbs.db
 *.swp
 *.ropeproject/
 
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
+
 # Environment files - NEVER COMMIT!
 .env
 .env.local
