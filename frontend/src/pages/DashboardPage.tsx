@@ -25,7 +25,7 @@ import {
   Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ProjectImportDialog } from "@/components/export/ProjectImportDialog";
@@ -96,8 +96,15 @@ export function DashboardPage() {
   const totalProjects = projects?.length || 0;
   const totalTemplates = templates?.length || 0;
 
-  // Get recent projects (last 5)
-  const recentProjects = projects?.slice(0, 5) || [];
+  // Get recent projects (last 5, sorted by most recently updated)
+  const recentProjects = projects
+    ?.slice()
+    .sort((a, b) => {
+      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return dateB - dateA; // Most recent first
+    })
+    .slice(0, 5) || [];
 
   // Get all unique category tags
   const allCategoryTags = new Set<string>();
@@ -727,9 +734,7 @@ function ProjectCard({ project }: { project: any }) {
             {project.updated_at && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {formatDistanceToNow(new Date(project.updated_at), {
-                  addSuffix: true,
-                })}
+                {format(new Date(project.updated_at), "MMM d, yyyy 'at' HH:mm")}
               </span>
             )}
           </div>

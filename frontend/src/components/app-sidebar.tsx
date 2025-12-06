@@ -79,17 +79,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Fetch projects for the sidebar
   const { data: projects } = useProjects();
 
-  // Get recent projects (last 6)
+  // Get recent projects (last 6, sorted by most recently updated)
   const recentProjects = React.useMemo(() => {
     if (!projects) return [];
 
-    // Sort by name for now since we don't have timestamps
-    // In the future, this should be sorted by updated_at
-    return projects.slice(0, 6).map((project: any) => ({
-      name: project.name,
-      url: `/projects/${project.id}`,
-      icon: Workflow,
-    }));
+    // Sort by updated_at (most recent first)
+    return projects
+      .slice()
+      .sort((a: any, b: any) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 6)
+      .map((project: any) => ({
+        name: project.name,
+        url: `/projects/${project.id}`,
+        icon: Workflow,
+        id: project.id,
+        updated_at: project.updated_at,
+      }));
   }, [projects]);
 
   const userData = {

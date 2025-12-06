@@ -2,6 +2,7 @@ import { Plus, type LucideIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useDeleteProject } from "@/hooks/api/useProjects";
+import { format } from "date-fns";
 
 import {
   AlertDialog,
@@ -30,6 +31,7 @@ export function NavProjects({
     url: string;
     icon: LucideIcon;
     id?: string;
+    updated_at?: string;
   }[];
 }) {
   const navigate = useNavigate();
@@ -71,9 +73,16 @@ export function NavProjects({
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton asChild>
-                  <Link to={item.url}>
-                    <item.icon style={{ width: "16px", height: "16px" }} />
-                    <span>{item.name}</span>
+                  <Link to={item.url} className="flex flex-col items-start gap-0 py-2">
+                    <div className="flex items-center gap-2 w-full">
+                      <item.icon style={{ width: "16px", height: "16px" }} />
+                      <span className="truncate">{item.name}</span>
+                    </div>
+                    {item.updated_at && (
+                      <span className="text-[10px] text-muted-foreground ml-6">
+                        {format(new Date(item.updated_at), "MMM d, yyyy")}
+                      </span>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
