@@ -158,14 +158,52 @@ src/
 - **UI Components**: kebab-case (e.g., `button.tsx`, `dialog.tsx`)
 
 ### Best Practices
-- **Always validate user input** with Zod schemas
-- **Handle errors gracefully** with proper error boundaries and try-catch
-- **Use TypeScript strict mode** - no implicit any
-- **Accessibility first** - use semantic HTML and ARIA attributes
-- **Performance**: Use React.memo, useMemo, useCallback judiciously
-- **Security**: Never expose API keys or secrets in frontend code
-- **Code splitting**: Lazy load heavy components and routes
-- **Testing**: Write tests for critical business logic
+
+#### Code Quality & Professional Standards
+- **Clean, readable code** - clarity over cleverness, code is read more than written
+- **Meaningful names** - descriptive variables/functions, no single letters except loop counters
+- **Small functions** - single responsibility, easy to test and debug
+- **Explicit over implicit** - no magic numbers, use named constants
+- **DRY principle** - extract common logic, avoid duplication
+- **Comments for WHY** - explain intent and decisions, not obvious operations
+- **TypeScript strict mode** - no implicit any, leverage type system fully
+
+#### Debugging & Error Handling
+- **Descriptive error messages** - include context (IDs, values) for debugging
+- **Proper error boundaries** - catch React errors gracefully with fallback UI
+- **Try-catch blocks** - handle async errors with meaningful fallbacks
+- **Console logging** - use in development for debugging, remove before commit
+- **Error tracking** - log errors with sufficient context for production debugging
+- **Validation errors** - surface user-friendly messages from Zod schemas
+
+#### Security & Validation (Critical for Pentest Tool)
+- **Always validate input** - Zod schemas on all user input and API responses
+- **Never expose secrets** - no API keys, tokens, or credentials in code
+- **Sanitize HTML** - DOMPurify before any dangerouslySetInnerHTML
+- **XSS prevention** - see .claude/security.md for comprehensive guidelines
+- **HTTPS only** - all API calls use secure protocol
+- **Authorization checks** - verify permissions before sensitive operations
+
+#### Performance & Optimization
+- **Code splitting** - lazy load routes and heavy components (React.lazy)
+- **Memoization** - React.memo, useMemo, useCallback for expensive operations only
+- **Virtual scrolling** - TanStack Virtual for lists >100 items
+- **Image optimization** - lazy loading, proper formats (WebP)
+- **Bundle analysis** - keep bundle size minimal, audit regularly
+
+#### Accessibility Standards (WCAG 2.1 AA)
+- **Semantic HTML** - proper heading hierarchy (h1-h6), landmarks (nav, main, aside)
+- **ARIA attributes** - labels, roles, states only where semantic HTML insufficient
+- **Keyboard navigation** - all interactive elements accessible via keyboard
+- **Screen reader support** - test with NVDA/JAWS
+- **Color contrast** - minimum 4.5:1 for normal text, 3:1 for large
+
+#### Development Workflow
+- **Test in browser** - verify changes work across breakpoints (mobile, tablet, desktop)
+- **Console clean** - no errors or warnings in DevTools before committing
+- **Git commits** - atomic, descriptive messages using conventional commits format
+- **Self-review** - review your own code diff before pushing
+- **Break points** - use browser debugger, not console.log for complex issues
 
 ### Security Considerations
 - This is a **penetration testing tool** - security is paramount
