@@ -19,6 +19,7 @@ __pycache__/
 *.py[cod]
 *.pyc
 *.pyo
+*.egg-info/
 
 # pnpm
 .pnpm-store/
