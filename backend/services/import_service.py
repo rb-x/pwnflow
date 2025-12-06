@@ -212,9 +212,10 @@ class ImportService:
                 # Read metadata
                 metadata = json.loads(zf.read('metadata.json').decode('utf-8'))
                 
-                # Validate format
-                if metadata.get("format") != "pwnflow-project":
-                    raise ValueError("Invalid file format. Expected pwnflow-project")
+                # Validate format (support both old "penflow-project" and new "pwnflow-project")
+                format_name = metadata.get("format")
+                if format_name not in ("pwnflow-project", "penflow-project"):
+                    raise ValueError(f"Invalid file format. Expected 'pwnflow-project' or 'penflow-project', got '{format_name}'")
                 
                 # Read and decrypt data if needed
                 is_encrypted = 'data.enc' in zf.namelist()
