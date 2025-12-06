@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
     if settings.GOOGLE_API_KEY:
         logger.info(f"GOOGLE_API_KEY first 10 chars: {settings.GOOGLE_API_KEY[:10]}...")
     logger.info(f"GEMINI_MODEL: {settings.GEMINI_MODEL}")
+    logger.info(f"TMUX_RUNNER_SECRET set: {'Yes (' + settings.TMUX_RUNNER_SECRET[:5] + '...)' if settings.TMUX_RUNNER_SECRET else 'No (command execution disabled)'}")
     
     app.state.neo4j_driver = get_driver()
     

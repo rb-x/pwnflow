@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     NOTIFICATION_SERVICE_URL: str = "http://notification-service:8010"
     NOTIFICATION_SERVICE_TOKEN: str = "dev-notify-token"
 
+    # Tmux Runner Encryption (AES-256-GCM)
+    # Base64-encoded 32-byte key, generate with: python pwnflow-exec/keygen.py
+    TMUX_RUNNER_SECRET: Optional[str] = None
+
     class Config:
         env_file = "../.env"
         case_sensitive = True

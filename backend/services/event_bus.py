@@ -1,7 +1,11 @@
 import base64
 import json
 import logging
+import os
+import time
 from typing import Any, Dict, Iterable, Optional
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from pwnflow_event_schemas import (
     BaseEvent,
@@ -18,8 +22,44 @@ from pwnflow_event_schemas import (
 )
 
 from db.redis import get_redis_client
+from core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _encrypt_command(command_body: str) -> dict:
+    """
+    Encrypt command using AES-256-GCM.
+
+    Returns dict with ciphertext, nonce, and timestamp (all base64 encoded).
+    Raises ValueError if TMUX_RUNNER_SECRET is not configured.
+    """
+    if not settings.TMUX_RUNNER_SECRET:
+        raise ValueError("TMUX_RUNNER_SECRET not configured - cannot encrypt command")
+
+    # Decode the base64 secret key
+    key = base64.b64decode(settings.TMUX_RUNNER_SECRET)
+    cipher = AESGCM(key)
+
+    # Generate nonce (12 bytes for GCM)
+    nonce = os.urandom(12)
+
+    # Current timestamp for replay protection
+    timestamp = int(time.time())
+
+    # Encrypt with timestamp as associated data
+    plaintext = command_body.encode('utf-8')
+    ciphertext = cipher.encrypt(
+        nonce=nonce,
+        data=plaintext,
+        associated_data=timestamp.to_bytes(8, 'big')
+    )
+
+    return {
+        "ciphertext": base64.b64encode(ciphertext).decode('utf-8'),
+        "nonce": base64.b64encode(nonce).decode('utf-8'),
+        "timestamp": timestamp
+    }
 
 DEFAULT_CHANNEL = "pwnflow.events"
 
@@ -150,10 +190,10 @@ async def emit_command_triggered(
     initiator_id: str,
     source: Optional[str] = None,
 ) -> Dict[str, Any]:
-    # Encode command body in base64 if it exists
-    command_base64 = None
+    # Encrypt command body with AES-256-GCM
+    encrypted = None
     if command_body:
-        command_base64 = base64.b64encode(command_body.encode('utf-8')).decode('utf-8')
+        encrypted = _encrypt_command(command_body)
 
     # Build event as dict since CommandTriggeredEvent is not available
     event = {
@@ -175,8 +215,9 @@ async def emit_command_triggered(
         "command": {
             "id": command_id,
             "title": command_title,
-            "command": command_base64,  # Base64 encoded command
-            "command_raw": command_body,  # Keep raw for backwards compatibility if needed
+            "ciphertext": encrypted["ciphertext"] if encrypted else None,
+            "nonce": encrypted["nonce"] if encrypted else None,
+            "timestamp": encrypted["timestamp"] if encrypted else None,
             "description": command_description
         }
     }

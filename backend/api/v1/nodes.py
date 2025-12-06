@@ -11,6 +11,7 @@ from crud import node as node_crud
 from crud import finding as finding_crud
 from api.dependencies import get_current_user, get_session
 from schemas.user import User
+from core.config import settings
 from services.ws_notifications import notification_manager
 from services.event_bus import (
     emit_command_triggered,
@@ -385,6 +386,13 @@ async def trigger_command_event(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    # Check if command execution is configured
+    if not settings.TMUX_RUNNER_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Command execution not configured (TMUX_RUNNER_SECRET missing)"
+        )
+
     context = await node_crud.get_command_context(
         session,
         command_id=command_id,
