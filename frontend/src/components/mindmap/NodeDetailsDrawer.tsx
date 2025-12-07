@@ -180,6 +180,7 @@ export function NodeDetailsDrawer({
   const [deleteTagsDialogOpen, setDeleteTagsDialogOpen] = useState(false);
   const [deleteCommandDialogOpen, setDeleteCommandDialogOpen] = useState(false);
   const [commandToDelete, setCommandToDelete] = useState<string | null>(null);
+  const [deleteFindingDialogOpen, setDeleteFindingDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [expandedCommands, setExpandedCommands] = useState<Set<string>>(
     new Set()
@@ -1044,20 +1045,7 @@ export function NodeDetailsDrawer({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={async () => {
-                                  if (!selectedNodeId) return;
-                                  try {
-                                    await deleteFinding.mutateAsync({
-                                      projectId,
-                                      nodeId: selectedNodeId,
-                                    });
-                                    // Clear local state
-                                    setFindingContent("");
-                                    setFindingDate(new Date());
-                                  } catch (error) {
-                                    console.error("Delete finding error:", error);
-                                  }
-                                }}
+                                onClick={() => setDeleteFindingDialogOpen(true)}
                                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -1477,6 +1465,45 @@ export function NodeDetailsDrawer({
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={confirmDeleteCommand}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Delete Finding Confirmation Dialog */}
+          <AlertDialog
+            open={deleteFindingDialogOpen}
+            onOpenChange={setDeleteFindingDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete finding?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete
+                  this finding and remove it from the project timeline.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    if (!selectedNodeId) return;
+                    try {
+                      await deleteFinding.mutateAsync({
+                        projectId,
+                        nodeId: selectedNodeId,
+                      });
+                      setFindingContent("");
+                      setFindingDate(new Date());
+                    } catch (error) {
+                      console.error("Delete finding error:", error);
+                    } finally {
+                      setDeleteFindingDialogOpen(false);
+                    }
+                  }}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   Delete
