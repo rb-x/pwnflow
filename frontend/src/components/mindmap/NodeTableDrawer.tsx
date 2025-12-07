@@ -81,7 +81,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useProjectNodes, useDeleteNode } from "@/hooks/api/useNodes";
+import { useProjectNodes } from "@/hooks/api/useNodes";
 import { useProjectOrTemplateContexts } from "@/hooks/api/useContexts";
 import { useNodeTableStore } from "@/store/nodeTableStore";
 import { cn } from "@/lib/utils";
@@ -165,7 +165,6 @@ export function NodeTableDrawer({
   } = useNodeTableStore();
 
   const navigateToNode = useNavigateToNode();
-  const deleteNode = useDeleteNode();
 
   const { data: projectData, isLoading } = useProjectNodes(
     projectId,
@@ -427,24 +426,22 @@ export function NodeTableDrawer({
     [navigateToNode, setOpen]
   );
 
-  // Handle node deletion
+  // Handle node deletion - dispatch event to MindMapEditor for undo support
   const handleDeleteNode = useCallback((nodeId: string) => {
     setNodeToDelete(nodeId);
     setDeleteNodeDialogOpen(true);
   }, []);
 
-  const confirmDeleteNode = useCallback(async () => {
+  const confirmDeleteNode = useCallback(() => {
     if (!nodeToDelete) return;
-    try {
-      await deleteNode.mutateAsync({ projectId, nodeId: nodeToDelete });
-      toast.success("Node deleted successfully");
-    } catch (error) {
-      toast.error("Failed to delete node");
-    } finally {
-      setDeleteNodeDialogOpen(false);
-      setNodeToDelete(null);
-    }
-  }, [projectId, nodeToDelete, deleteNode]);
+    // Dispatch event to MindMapEditor which handles deletion with undo support
+    window.dispatchEvent(
+      new CustomEvent("nodeDelete", { detail: { nodeId: nodeToDelete } })
+    );
+    setDeleteNodeDialogOpen(false);
+    setNodeToDelete(null);
+    setOpen(false); // Close the drawer after deletion
+  }, [nodeToDelete, setOpen]);
 
   // Handle command copy with variable resolution
   const handleCopyCommand = useCallback(
@@ -1438,8 +1435,8 @@ export function NodeTableDrawer({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete node?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this
-              node and all its associated data.
+              This will delete the node from the canvas. You can undo this
+              action using Ctrl+Z.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
