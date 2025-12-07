@@ -1,15 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
   Table,
   TableBody,
   TableCell,
@@ -20,12 +10,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -36,8 +26,6 @@ import {
 } from "@/components/ui/select";
 import {
   Search,
-  Filter,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
   Plus,
@@ -49,36 +37,67 @@ import {
   ChevronRight,
   Server,
   Trash2,
+  Loader2,
+  X,
+  Globe,
+  Tag,
+  MoreVertical,
+  Columns,
+  Pencil,
 } from "lucide-react";
-import { useScopeStore, type Asset, type Tag, type ServiceStatus } from "@/store/scopeStore";
+import { useScopeStore, type Asset, type Tag as TagType, type ServiceStatus } from "@/store/scopeStore";
 import { EditAssetDialog } from "./EditAssetDialog";
 import { ImportNmapDialog } from "./ImportNmapDialog";
+import { AddAssetDialog } from "./AddAssetDialog";
 
 interface ScopeTableProps {
   projectId: string;
 }
 
-type SortField = "status" | "target" | "port" | "protocol" | "vhost" | "tags" | "discoveredVia";
+type SortField = "status" | "target";
 type SortDirection = "asc" | "desc";
+type DiscoveryMethod = "nmap" | "manual" | "all";
+
+// Column definitions
+type ColumnId = "status" | "host" | "service" | "hostnames" | "vhosts" | "tags" | "discovery" | "notes";
+
+interface ColumnDef {
+  id: ColumnId;
+  label: string;
+  defaultVisible: boolean;
+}
+
+const COLUMNS: ColumnDef[] = [
+  { id: "status", label: "Status", defaultVisible: true },
+  { id: "host", label: "Host / Service", defaultVisible: true },
+  { id: "service", label: "Service", defaultVisible: true },
+  { id: "hostnames", label: "Hostnames", defaultVisible: true },
+  { id: "vhosts", label: "Virtual Hosts", defaultVisible: false },
+  { id: "tags", label: "Tags", defaultVisible: true },
+  { id: "discovery", label: "Discovery", defaultVisible: false },
+  { id: "notes", label: "Notes", defaultVisible: false },
+];
+
+// Helper to extract service name from notes (format: "Service: http | Product: ...")
+function extractServiceFromNotes(notes?: string): string | null {
+  if (!notes) return null;
+  const match = notes.match(/Service:\s*(\S+)/i);
+  return match ? match[1] : null;
+}
 
 export function ScopeTable({ projectId }: ScopeTableProps) {
-  const { 
-    assets, 
-    loading, 
-    error, 
-    fetchAssets, 
-    createAsset, 
-    updateAsset: updateAssetApi, 
+  const {
+    assets,
+    loading,
+    error,
+    fetchAssets,
+    updateAsset: updateAssetApi,
     deleteAsset,
-    addTagToAsset, 
-    removeTagFromAsset, 
-    createCustomTag, 
-    predefinedTags,
-    importNmapXml,
-    updateAssetStatus  // Legacy method for backwards compatibility
   } = useScopeStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ServiceStatus | "all">("all");
+  const [discoveryFilter, setDiscoveryFilter] = useState<DiscoveryMethod>("all");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("target");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [expandedHosts, setExpandedHosts] = useState<Set<string>>(new Set());
@@ -86,24 +105,44 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
   const [editAssetDialogOpen, setEditAssetDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [selectedHost, setSelectedHost] = useState<any | null>(null);
-  const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
-  const [newAsset, setNewAsset] = useState({
-    hostnames: [] as string[],
-    ip: "",
-    port: "",
-    protocol: "tcp" as "tcp" | "udp",
-    vhosts: [] as string[],
-    notes: "",
-    status: "not_tested" as ServiceStatus,
-    discoveredVia: "manual" as "nmap" | "ssl-cert" | "http-vhosts" | "manual"
-  });
-  const [newHostname, setNewHostname] = useState("");
-  const [newVhost, setNewVhost] = useState("");
   const [importNmapDialogOpen, setImportNmapDialogOpen] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  // Column visibility state - load from localStorage
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('scopeTable.visibleColumns');
+      if (saved) {
+        try {
+          return new Set(JSON.parse(saved) as ColumnId[]);
+        } catch {}
+      }
+    }
+    return new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.id));
+  });
+
+  // Save column visibility to localStorage
+  useEffect(() => {
+    localStorage.setItem('scopeTable.visibleColumns', JSON.stringify([...visibleColumns]));
+  }, [visibleColumns]);
+
+  const toggleColumn = (columnId: ColumnId) => {
+    const newVisible = new Set(visibleColumns);
+    if (newVisible.has(columnId)) {
+      // Don't allow hiding all columns - keep at least status and host
+      if (columnId !== 'status' && columnId !== 'host') {
+        newVisible.delete(columnId);
+      }
+    } else {
+      newVisible.add(columnId);
+    }
+    setVisibleColumns(newVisible);
+  };
+
+  const isColumnVisible = (columnId: ColumnId) => visibleColumns.has(columnId);
 
   // Fetch assets when component loads or projectId changes
   useEffect(() => {
@@ -112,49 +151,18 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
     }
   }, [projectId, fetchAssets]);
 
-  // Helper to extract domain from hostname
-  const extractDomain = (hostname: string): string => {
-    const parts = hostname.split('.');
-    return parts.length > 2 ? parts.slice(-2).join('.') : hostname;
-  };
-
-  // Helper to get connected asset IDs - services on same IP
-  const getConnectedAssetIds = (asset: Asset): string[] => {
-    const connectedIds = new Set<string>([asset.id]);
-    
-    // Include other services on the same IP
-    assets.forEach(otherAsset => {
-      if (otherAsset.ip === asset.ip && otherAsset.id !== asset.id) {
-        connectedIds.add(otherAsset.id);
-      }
+  // Get all unique tags from assets for filtering
+  const allTags = useMemo(() => {
+    const tagMap = new Map<string, TagType>();
+    assets.forEach(asset => {
+      asset.tags.forEach(tag => {
+        if (!tagMap.has(tag.id)) {
+          tagMap.set(tag.id, tag);
+        }
+      });
     });
-    
-    return Array.from(connectedIds);
-  };
-
-  // Helper to get relationship info for tooltip
-  const getRelationshipInfo = (asset: Asset): string => {
-    const connections = getConnectedAssetIds(asset);
-    if (connections.length <= 1) return "";
-    
-    const otherAssets = connections.filter(id => id !== asset.id)
-      .map(id => assets.find(a => a.id === id))
-      .filter(Boolean) as Asset[];
-    
-    const services = otherAssets.filter(a => a.ip && a.port);
-    return services.length ? `Same IP: ${services.map(a => `${a.port}/${a.protocol}`).join(", ")}` : "";
-  };
-
-  // Helper to check if an asset should be highlighted
-  const shouldHighlightAsset = (asset: Asset): boolean => {
-    if (!hoveredAssetId) return false;
-    
-    const hoveredAsset = assets.find(a => a.id === hoveredAssetId);
-    if (!hoveredAsset) return false;
-    
-    const connectedIds = getConnectedAssetIds(hoveredAsset);
-    return connectedIds.includes(asset.id);
-  };
+    return Array.from(tagMap.values());
+  }, [assets]);
 
   const getStatusIcon = (status: ServiceStatus) => {
     switch (status) {
@@ -169,32 +177,6 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
       case "not_tested":
         return <Circle className="h-4 w-4 text-gray-500" />;
     }
-  };
-
-  const getStatusBadge = (status: ServiceStatus) => {
-    const labels = {
-      clean: "Clean",
-      testing: "Testing",
-      vulnerable: "Vulnerable", 
-      exploitable: "Exploitable",
-      not_tested: "Not Tested",
-    };
-
-    const customClasses = {
-      clean: "bg-green-100 text-green-700 hover:bg-green-100/80 border-green-200",
-      vulnerable: "bg-red-800 text-red-100 hover:bg-red-800/80 border-red-800",
-      exploitable: "bg-black text-white hover:bg-black/80 border-black",
-      testing: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100/80 border-yellow-200",
-      not_tested: "bg-gray-100 text-gray-700 hover:bg-gray-100/80 border-gray-200"
-    };
-
-    return (
-      <Badge 
-        className={`${customClasses[status as keyof typeof customClasses] || ""} border`}
-      >
-        {labels[status]}
-      </Badge>
-    );
   };
 
   const handleStatusChange = async (id: string, newStatus: ServiceStatus) => {
@@ -212,11 +194,11 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="h-4 w-4" />;
+      return null;
     }
-    return sortDirection === "asc" ? 
-      <ArrowUp className="h-4 w-4" /> : 
-      <ArrowDown className="h-4 w-4" />;
+    return sortDirection === "asc" ?
+      <ArrowUp className="ml-1 h-3 w-3" /> :
+      <ArrowDown className="ml-1 h-3 w-3" />;
   };
 
   const filteredAndSortedData = useMemo(() => {
@@ -228,8 +210,8 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
       const vhosts = (asset.vhosts && asset.vhosts.length > 0) ? asset.vhosts.join(", ") : "";
       const tags = asset.tags.map(tag => tag.name).join(" ");
       const notes = asset.notes || "";
-      
-      const matchesSearch = 
+
+      const matchesSearch =
         hostnames.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ip.toLowerCase().includes(searchQuery.toLowerCase()) ||
         port.includes(searchQuery) ||
@@ -237,60 +219,35 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
         vhosts.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tags.toLowerCase().includes(searchQuery.toLowerCase()) ||
         notes.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesStatus = statusFilter === "all" || asset.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
+      const matchesDiscovery = discoveryFilter === "all" || asset.discovered_via === discoveryFilter;
+      const matchesTag = !tagFilter || asset.tags.some(t => t.id === tagFilter);
+
+      return matchesSearch && matchesStatus && matchesDiscovery && matchesTag;
     });
 
     // Sort the filtered data
     filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
-      
+      let aValue: string, bValue: string;
+
       switch (sortField) {
         case "status":
-          aValue = a.status;
-          bValue = b.status;
-          break;
+          const statusOrder = { "exploitable": 4, "vulnerable": 3, "testing": 2, "clean": 1, "not_tested": 0 };
+          const aOrder = statusOrder[a.status];
+          const bOrder = statusOrder[b.status];
+          return sortDirection === "asc" ? aOrder - bOrder : bOrder - aOrder;
         case "target":
-          aValue = a.ip || "";
-          bValue = b.ip || "";
-          break;
-        case "port":
-          aValue = a.port || 0;
-          bValue = b.port || 0;
-          break;
-        case "protocol":
-          aValue = a.protocol || "";
-          bValue = b.protocol || "";
-          break;
-        case "vhost":
-          aValue = (a.vhosts && a.vhosts.length > 0) ? a.vhosts.join(", ") : "";
-          bValue = (b.vhosts && b.vhosts.length > 0) ? b.vhosts.join(", ") : "";
-          break;
-        case "tags":
-          aValue = a.tags.length;
-          bValue = b.tags.length;
-          break;
-        case "discoveredVia":
-          aValue = a.discovered_via;
-          bValue = b.discovered_via;
-          break;
         default:
           aValue = a.ip || "";
           bValue = b.ip || "";
+          const comparison = aValue.localeCompare(bValue);
+          return sortDirection === "asc" ? comparison : -comparison;
       }
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-      }
-      
-      const comparison = String(aValue).localeCompare(String(bValue));
-      return sortDirection === "asc" ? comparison : -comparison;
     });
 
     return filtered;
-  }, [assets, searchQuery, statusFilter, sortField, sortDirection]);
+  }, [assets, searchQuery, statusFilter, discoveryFilter, tagFilter, sortField, sortDirection]);
 
   // Group services by IP for expandable host groups
   const hostGroups = useMemo(() => {
@@ -311,11 +268,10 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
           status: "not_tested"
         });
       }
-      
+
       const host = hostMap.get(ip)!;
       host.services.push(asset);
-      
-      // Collect all hostnames from all services on this IP
+
       if (asset.hostnames) {
         asset.hostnames.forEach(hostname => {
           if (!host.hostnames.includes(hostname)) {
@@ -323,29 +279,44 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
           }
         });
       }
-      
-      // Set most critical status
+
       const statusPriority = { "exploitable": 4, "vulnerable": 3, "testing": 2, "clean": 1, "not_tested": 0 };
       if (statusPriority[asset.status] > statusPriority[host.status]) {
         host.status = asset.status;
       }
     });
-    
+
     return Array.from(hostMap.values()).sort((a, b) => a.ip.localeCompare(b.ip));
   }, [filteredAndSortedData]);
 
+  // Stats for summary badges
+  const stats = useMemo(() => {
+    const totalHosts = hostGroups.length;
+    const totalServices = assets.length;
+    const statusCounts = {
+      exploitable: 0,
+      vulnerable: 0,
+      testing: 0,
+      clean: 0,
+      not_tested: 0,
+    };
+    assets.forEach(a => {
+      statusCounts[a.status]++;
+    });
+    return { totalHosts, totalServices, statusCounts };
+  }, [hostGroups, assets]);
+
   // Pagination logic
   const totalItems = hostGroups.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedHostGroups = hostGroups.slice(startIndex, endIndex);
 
-  // Reset to first page when search/filter changes
+  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
-
+  }, [searchQuery, statusFilter, discoveryFilter, tagFilter]);
 
   const toggleHost = (ip: string) => {
     const newExpanded = new Set(expandedHosts);
@@ -375,11 +346,9 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
     }
 
     try {
-      // Delete all services on this host
-      const deletePromises = hostGroup.services.map((service: Asset) => 
+      const deletePromises = hostGroup.services.map((service: Asset) =>
         deleteAsset(projectId, service.id)
       );
-      
       await Promise.all(deletePromises);
     } catch (error) {
       console.error('Failed to delete host:', error);
@@ -387,758 +356,613 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
     }
   };
 
-  const addHostname = () => {
-    if (newHostname.trim() && !newAsset.hostnames.includes(newHostname.trim())) {
-      setNewAsset({
-        ...newAsset,
-        hostnames: [...newAsset.hostnames, newHostname.trim()]
-      });
-      setNewHostname("");
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDiscoveryFilter("all");
+    setTagFilter(null);
+  };
+
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || discoveryFilter !== "all" || tagFilter !== null;
+
+  const handleTagClick = (tagId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (tagFilter === tagId) {
+      setTagFilter(null);
+    } else {
+      setTagFilter(tagId);
     }
   };
 
-  const removeHostname = (hostnameToRemove: string) => {
-    setNewAsset({
-      ...newAsset,
-      hostnames: newAsset.hostnames.filter(h => h !== hostnameToRemove)
-    });
-  };
-
-  const addVhost = () => {
-    if (newVhost.trim() && !newAsset.vhosts.includes(newVhost.trim())) {
-      setNewAsset({
-        ...newAsset,
-        vhosts: [...newAsset.vhosts, newVhost.trim()]
-      });
-      setNewVhost("");
-    }
-  };
-
-  const removeVhost = (vhostToRemove: string) => {
-    setNewAsset({
-      ...newAsset,
-      vhosts: newAsset.vhosts.filter(v => v !== vhostToRemove)
-    });
-  };
-
-  const handleAddAsset = async () => {
-    // Validate required fields
-    if (!newAsset.ip || !newAsset.port) {
-      alert('IP Address and Port are required!');
-      return;
-    }
-    
-    try {
-      const assetToAdd = {
-        ip: newAsset.ip,
-        port: parseInt(newAsset.port),
-        protocol: newAsset.protocol,
-        hostnames: newAsset.hostnames,
-        vhosts: newAsset.vhosts,
-        status: newAsset.status,
-        discovered_via: newAsset.discoveredVia,
-        notes: newAsset.notes
-      };
-
-      const created = await createAsset(projectId, assetToAdd);
-      
-      if (created) {
-        setAddAssetDialogOpen(false);
-        setNewAsset({
-          hostnames: [],
-          ip: "",
-          port: "",
-          protocol: "tcp",
-          vhosts: [],
-          notes: "",
-          status: "not_tested",
-          discoveredVia: "manual"
-        });
-        setNewHostname("");
-        setNewVhost("");
-      } else {
-        alert('Failed to create asset. It may already exist.');
-      }
-    } catch (error) {
-      console.error('Failed to create asset:', error);
-      alert('Failed to create asset. Please try again.');
-    }
-  };
-
-  const renderHostGroupRow = (hostGroup: any) => {
-    const isExpanded = expandedHosts.has(hostGroup.ip);
-    
-    return (
-      <TableRow 
-        key={`host-${hostGroup.ip}`}
-        className="group border-b border-border/40 hover:bg-muted/40 cursor-pointer bg-muted/20"
-        onClick={() => toggleHost(hostGroup.ip)}
-      >
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-            {getStatusIcon(hostGroup.status)}
-          </div>
-        </TableCell>
-        <TableCell className="font-mono text-sm font-semibold">
-          <div className="flex items-center gap-2">
-            <Server className="h-4 w-4 text-muted-foreground" />
-            <span 
-              className="cursor-pointer hover:text-primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditHost(hostGroup);
-              }}
-              title="Click to edit host"
-            >
-              {hostGroup.ip}
-            </span>
-            <Badge variant="outline" className="text-xs px-2 py-0.5">
-              {hostGroup.services.length} services
-            </Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteHost(hostGroup);
-              }}
-              title={`Delete host ${hostGroup.ip} and all services`}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        </TableCell>
-        <TableCell className="text-sm">
-          <div className="flex flex-wrap gap-1">
-            {hostGroup.hostnames.length > 0 ? (
-              hostGroup.hostnames.map((hostname: string) => (
-                <Badge key={hostname} variant="outline" className="text-xs">
-                  {hostname}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-muted-foreground">-</span>
-            )}
-          </div>
-        </TableCell>
-        <TableCell className="text-sm">
-          <div className="flex flex-wrap gap-1">
-            {(() => {
-              // Collect all unique vhosts from all services on this host
-              const allVhosts = new Set<string>();
-              hostGroup.services.forEach((service: Asset) => {
-                if (service.vhosts) {
-                  service.vhosts.forEach(vhost => allVhosts.add(vhost));
-                }
-              });
-              const vhostArray = Array.from(allVhosts);
-              
-              return vhostArray.length > 0 ? (
-                vhostArray.map(vhost => (
-                  <Badge key={vhost} className="text-xs bg-blue-100 text-blue-800 border-blue-200">
-                    {vhost}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              );
-            })()}
-          </div>
-        </TableCell>
-        <TableCell className="text-muted-foreground">-</TableCell>
-        <TableCell className="text-muted-foreground">-</TableCell>
-        <TableCell className="text-muted-foreground">-</TableCell>
-      </TableRow>
-    );
-  };
-
-  const renderServiceRow = (asset: Asset, isChild = false) => {
-    return (
-      <TableRow 
-        key={asset.id} 
-        className={`border-b border-border/40 transition-colors cursor-pointer hover:bg-muted/40 ${
-          isChild ? 'bg-muted/20' : ''
-        }`}
-      >
-        <TableCell>
-          <div className="flex items-center gap-2">
-            {isChild && <div className="w-6 h-px bg-border ml-2" />}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  {getStatusIcon(asset.status)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuCheckboxItem 
-                  checked={asset.status === "not_tested"}
-                  onCheckedChange={() => handleStatusChange(asset.id, "not_tested")}
-                >
-                  Not Tested
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={asset.status === "testing"}
-                  onCheckedChange={() => handleStatusChange(asset.id, "testing")}
-                >
-                  Testing
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={asset.status === "clean"}
-                  onCheckedChange={() => handleStatusChange(asset.id, "clean")}
-                >
-                  Clean
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={asset.status === "vulnerable"}
-                  onCheckedChange={() => handleStatusChange(asset.id, "vulnerable")}
-                >
-                  Vulnerable
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={asset.status === "exploitable"}
-                  onCheckedChange={() => handleStatusChange(asset.id, "exploitable")}
-                >
-                  Exploitable
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </TableCell>
-        <TableCell className="font-mono text-sm">
-          <div className="flex items-center gap-2">
-            {isChild && <span className="text-muted-foreground">└─</span>}
-            <span 
-              className="cursor-pointer hover:text-primary"
-              onClick={() => handleEditAsset(asset)}
-              title="Click to edit service"
-            >
-              {asset.port}/{asset.protocol}
-            </span>
-          </div>
-        </TableCell>
-        <TableCell className="text-muted-foreground">
-          -
-        </TableCell>
-        <TableCell className="text-sm">
-          <div className="flex flex-wrap gap-1">
-            {(asset.vhosts && asset.vhosts.length > 0) 
-              ? asset.vhosts.map(vhost => (
-                  <Badge key={vhost} className="text-xs bg-blue-100 text-blue-800 border-blue-200">
-                    {vhost}
-                  </Badge>
-                ))
-              : <span className="text-muted-foreground">-</span>
-            }
-          </div>
-        </TableCell>
-        <TableCell>
-          <div className="flex flex-wrap gap-1">
-            {asset.tags.map((tag) => (
-              <Badge 
-                key={tag.id} 
-                className={`text-xs ${tag.color} text-white border-0`}
-              >
-                {tag.name}
-              </Badge>
-            ))}
-            {asset.tags.length === 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
-                title="Add tag"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditAsset(asset);
-                }}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-        </TableCell>
-        <TableCell>
-          <Badge variant="outline" className="text-xs">
-            {asset.discovered_via}
-          </Badge>
-        </TableCell>
-        <TableCell className="text-sm text-muted-foreground max-w-64 truncate">
-          {asset.notes || "-"}
-        </TableCell>
-      </TableRow>
-    );
-  };
+  // Sortable header component - only for columns that make sense to sort
+  const SortableHeader = ({
+    field,
+    children,
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+  }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 px-2 hover:bg-transparent font-medium"
+      onClick={() => handleSort(field)}
+    >
+      {children}
+      {getSortIcon(field)}
+    </Button>
+  );
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header with search and filters */}
-      <div className="flex-shrink-0 border-b border-border/60 bg-card/40 px-6 py-5">
-        <div className="flex flex-col gap-4 rounded-xl border border-border/70 bg-background/70 p-4 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <>
+      <div className="flex flex-col h-full">
+        {/* Header with search and filters */}
+        <div className="flex-shrink-0 border-b border-border/60 bg-card/40 px-6 py-5 space-y-4">
+          {/* Summary stats */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <Badge variant="secondary" className="text-xs gap-1.5 px-3 py-1">
+              <Server className="h-3 w-3" />
+              {stats.totalHosts} hosts
+            </Badge>
+            <Badge variant="secondary" className="text-xs gap-1.5 px-3 py-1">
+              <Globe className="h-3 w-3" />
+              {stats.totalServices} services
+            </Badge>
+            {stats.statusCounts.exploitable > 0 && (
+              <Badge className="text-xs gap-1.5 px-3 py-1 bg-black text-white">
+                {stats.statusCounts.exploitable} exploitable
+              </Badge>
+            )}
+            {stats.statusCounts.vulnerable > 0 && (
+              <Badge className="text-xs gap-1.5 px-3 py-1 bg-red-800 text-white">
+                {stats.statusCounts.vulnerable} vulnerable
+              </Badge>
+            )}
+            {stats.statusCounts.testing > 0 && (
+              <Badge className="text-xs gap-1.5 px-3 py-1 bg-yellow-100 text-yellow-700">
+                {stats.statusCounts.testing} testing
+              </Badge>
+            )}
+          </div>
+
+          {/* Search and filters row */}
+          <div className="flex gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search assets, services, hostnames, IPs, tags..."
+                placeholder="Search hosts, services, IPs, hostnames..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 rounded-lg border border-border/60 bg-background/85 pl-9 text-sm"
+                className="pl-9"
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="not_tested">Not Tested</SelectItem>
+                <SelectItem value="testing">Testing</SelectItem>
+                <SelectItem value="clean">Clean</SelectItem>
+                <SelectItem value="vulnerable">Vulnerable</SelectItem>
+                <SelectItem value="exploitable">Exploitable</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={discoveryFilter}
+              onValueChange={(value) => setDiscoveryFilter(value as DiscoveryMethod)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Discovery" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="nmap">Nmap</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {allTags.length > 0 && (
               <Select
-                value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value as ServiceStatus | "all")}
+                value={tagFilter || "all"}
+                onValueChange={(value) => setTagFilter(value === "all" ? null : value)}
               >
-                <SelectTrigger className="h-9 w-[150px] rounded-lg border border-border/60 bg-background/80 text-sm">
-                  <SelectValue placeholder="All Statuses" />
+                <SelectTrigger className="w-[140px]">
+                  <Tag className="h-3 w-3 mr-2" />
+                  <SelectValue placeholder="Tag" />
                 </SelectTrigger>
-                <SelectContent className="w-[200px]">
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="not_tested">Not Tested</SelectItem>
-                  <SelectItem value="testing">Testing</SelectItem>
-                  <SelectItem value="clean">Clean</SelectItem>
-                  <SelectItem value="vulnerable">Vulnerable</SelectItem>
-                  <SelectItem value="exploitable">Exploitable</SelectItem>
+                <SelectContent>
+                  <SelectItem value="all">All Tags</SelectItem>
+                  {allTags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${tag.color}`} />
+                        {tag.name}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            )}
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 rounded-lg border border-border/60 bg-background/80"
-                  >
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+            {/* Column visibility toggle */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9">
+                  <Columns className="mr-2 h-4 w-4" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {COLUMNS.map((column) => (
                   <DropdownMenuCheckboxItem
-                    checked={sortField === "target"}
-                    onCheckedChange={() => setSortField("target")}
+                    key={column.id}
+                    checked={isColumnVisible(column.id)}
+                    onCheckedChange={() => toggleColumn(column.id)}
+                    disabled={column.id === 'status' || column.id === 'host'}
                   >
-                    Sort Alphabetically
+                    {column.label}
                   </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={sortField === "status"}
-                    onCheckedChange={() => setSortField("status")}
-                  >
-                    Sort by Status
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="h-9">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setAddAssetDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Manual Entry
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportNmapDialogOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Nmap XML
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {hasActiveFilters && (
               <Button
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-lg border border-border/60 bg-background/80 text-sm"
-                onClick={() => setImportNmapDialogOpen(true)}
+                variant="ghost"
+                size="icon"
+                onClick={clearFilters}
+                title="Clear all filters"
+                className="h-9 w-9"
               >
-                <Upload className="mr-2 h-4 w-4" />
-                Import Nmap
+                <X className="h-4 w-4" />
               </Button>
+            )}
+          </div>
 
-              <Dialog open={addAssetDialogOpen} onOpenChange={setAddAssetDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="h-9 rounded-lg text-sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Asset
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Add New Asset</DialogTitle>
-                  <DialogDescription>
-                    Add a new hostname, IP address, or service to your scope.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-6 py-4">
-                  {/* Host Information Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <h4 className="text-sm font-semibold text-foreground">Host Information</h4>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="ip">IP Address <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="ip"
-                          placeholder="10.1.1.100"
-                          value={newAsset.ip}
-                          onChange={(e) => setNewAsset({...newAsset, ip: e.target.value})}
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">IPv4 or IPv6 address (required)</p>
+          {/* Active filters display */}
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {searchQuery && (
+                <Badge variant="secondary" className="gap-1">
+                  Search: {searchQuery}
+                  <button onClick={() => setSearchQuery("")} className="ml-1 hover:bg-primary/20 rounded">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {statusFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1">
+                  Status: {statusFilter.replace('_', ' ')}
+                  <button onClick={() => setStatusFilter("all")} className="ml-1 hover:bg-primary/20 rounded">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {discoveryFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1">
+                  Discovery: {discoveryFilter}
+                  <button onClick={() => setDiscoveryFilter("all")} className="ml-1 hover:bg-primary/20 rounded">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {tagFilter && (
+                <Badge variant="secondary" className="gap-1">
+                  Tag: {allTags.find(t => t.id === tagFilter)?.name || tagFilter}
+                  <button onClick={() => setTagFilter(null)} className="ml-1 hover:bg-primary/20 rounded">
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto px-6 py-4">
+          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-sm">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-12"></TableHead>
+                  {isColumnVisible('status') && (
+                    <TableHead className="w-24">
+                      <SortableHeader field="status">Status</SortableHeader>
+                    </TableHead>
+                  )}
+                  {isColumnVisible('host') && (
+                    <TableHead className="min-w-48">
+                      <SortableHeader field="target">Host / Service</SortableHeader>
+                    </TableHead>
+                  )}
+                  {isColumnVisible('service') && (
+                    <TableHead className="w-24">Service</TableHead>
+                  )}
+                  {isColumnVisible('hostnames') && (
+                    <TableHead className="min-w-32">Hostnames</TableHead>
+                  )}
+                  {isColumnVisible('vhosts') && (
+                    <TableHead className="min-w-32">Virtual Hosts</TableHead>
+                  )}
+                  {isColumnVisible('tags') && (
+                    <TableHead className="min-w-24">Tags</TableHead>
+                  )}
+                  {isColumnVisible('discovery') && (
+                    <TableHead className="w-28">Discovery</TableHead>
+                  )}
+                  {isColumnVisible('notes') && (
+                    <TableHead className="min-w-48">Notes</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumns.size + 1} className="h-32">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Loading assets...</span>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Hostnames <span className="text-muted-foreground">(Optional)</span></Label>
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-md">
-                            {newAsset.hostnames.length ? (
-                              newAsset.hostnames.map((hostname) => (
-                                <Badge
-                                  key={hostname}
-                                  variant="secondary"
-                                  className="flex items-center gap-1 px-2 py-1"
-                                >
-                                  <span className="text-xs">{hostname}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-4 w-4 p-0 hover:bg-red-100"
-                                    onClick={() => removeHostname(hostname)}
-                                  >
-                                    <Plus className="h-3 w-3 rotate-45" />
-                                  </Button>
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-sm text-muted-foreground">No hostnames added</span>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="www.example.com"
-                              value={newHostname}
-                              onChange={(e) => setNewHostname(e.target.value)}
-                              onKeyPress={(e) => e.key === 'Enter' && addHostname()}
-                            />
-                            <Button onClick={addHostname} size="sm" type="button">
-                              <Plus className="h-4 w-4" />
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedHostGroups.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumns.size + 1} className="h-32">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Server className="h-8 w-8 text-muted-foreground/50" />
+                        <span className="text-muted-foreground">No assets found</span>
+                        <span className="text-sm text-muted-foreground">
+                          {error ? `Error: ${error}` : hasActiveFilters ? "Try adjusting your filters" : "Import from Nmap or add assets manually"}
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedHostGroups.map((hostGroup) => {
+                    const isExpanded = expandedHosts.has(hostGroup.ip);
+                    return (
+                      <React.Fragment key={hostGroup.ip}>
+                        {/* Host row */}
+                        <TableRow
+                          className="group cursor-pointer bg-muted/30 hover:bg-muted/50 transition-colors"
+                          onClick={() => toggleHost(hostGroup.ip)}
+                        >
+                          <TableCell className="py-3">
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 transition-transform" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 transition-transform" />
+                              )}
                             </Button>
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Multiple domain/subdomain names</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Service Details Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <h4 className="text-sm font-semibold text-foreground">Service Details</h4>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="port">Port <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="port"
-                          type="number"
-                          placeholder="80"
-                          value={newAsset.port}
-                          onChange={(e) => setNewAsset({...newAsset, port: e.target.value})}
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">Service port (required)</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="protocol">Protocol <span className="text-muted-foreground">(Optional)</span></Label>
-                        <Select 
-                          value={newAsset.protocol} 
-                          onValueChange={(value) => setNewAsset({...newAsset, protocol: value as "tcp" | "udp"})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="tcp">TCP</SelectItem>
-                            <SelectItem value="udp">UDP</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="status">Initial Status <span className="text-muted-foreground">(Optional)</span></Label>
-                        <Select 
-                          value={newAsset.status} 
-                          onValueChange={(value) => setNewAsset({...newAsset, status: value as ServiceStatus})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="not_tested">Not Tested</SelectItem>
-                            <SelectItem value="testing">Testing</SelectItem>
-                            <SelectItem value="clean">Clean</SelectItem>
-                            <SelectItem value="vulnerable">Vulnerable</SelectItem>
-                            <SelectItem value="exploitable">Exploitable</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Virtual Hosts Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <h4 className="text-sm font-semibold text-foreground">Virtual Hosts</h4>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Virtual Hosts <span className="text-muted-foreground">(Optional)</span></Label>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded-md">
-                          {newAsset.vhosts.length ? (
-                            newAsset.vhosts.map((vhost) => (
-                              <Badge
-                                key={vhost}
-                                variant="outline"
-                                className="flex items-center gap-1 px-2 py-1 bg-purple-50 border-purple-200"
-                              >
-                                <span className="text-xs">{vhost}</span>
+                          </TableCell>
+                          {isColumnVisible('status') && (
+                            <TableCell>
+                              {getStatusIcon(hostGroup.status)}
+                            </TableCell>
+                          )}
+                          {isColumnVisible('host') && (
+                            <TableCell className="font-mono text-sm font-semibold">
+                              <div className="flex items-center gap-2">
+                                <Server className="h-4 w-4 text-muted-foreground" />
+                                <span
+                                  className="hover:text-primary cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditHost(hostGroup);
+                                  }}
+                                >
+                                  {hostGroup.ip}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {hostGroup.services.length} {hostGroup.services.length === 1 ? 'service' : 'services'}
+                                </Badge>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-4 w-4 p-0 hover:bg-red-100"
-                                  onClick={() => removeVhost(vhost)}
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteHost(hostGroup);
+                                  }}
                                 >
-                                  <Plus className="h-3 w-3 rotate-45" />
+                                  <Trash2 className="h-3 w-3" />
                                 </Button>
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">No virtual hosts added</span>
+                              </div>
+                            </TableCell>
                           )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="blog.example.com"
-                            value={newVhost}
-                            onChange={(e) => setNewVhost(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && addVhost()}
-                          />
-                          <Button onClick={addVhost} size="sm" type="button">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        VHosts served by this service
-                      </p>
-                    </div>
-                  </div>
+                          {isColumnVisible('service') && (
+                            <TableCell className="text-muted-foreground">-</TableCell>
+                          )}
+                          {isColumnVisible('hostnames') && (
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {hostGroup.hostnames.length > 0 ? (
+                                  hostGroup.hostnames.slice(0, 2).map((hostname: string) => (
+                                    <Badge key={hostname} variant="outline" className="text-xs">
+                                      {hostname}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                                {hostGroup.hostnames.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{hostGroup.hostnames.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                          )}
+                          {isColumnVisible('vhosts') && (
+                            <TableCell>
+                              {(() => {
+                                const allVhosts = new Set<string>();
+                                hostGroup.services.forEach((service: Asset) => {
+                                  service.vhosts?.forEach(vhost => allVhosts.add(vhost));
+                                });
+                                const vhostArray = Array.from(allVhosts);
 
-                  {/* Divider */}
-                  <div className="border-t border-border/40"></div>
+                                return vhostArray.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {vhostArray.slice(0, 2).map(vhost => (
+                                      <Badge key={vhost} className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                                        {vhost}
+                                      </Badge>
+                                    ))}
+                                    {vhostArray.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{vhostArray.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                );
+                              })()}
+                            </TableCell>
+                          )}
+                          {isColumnVisible('tags') && (
+                            <TableCell className="text-muted-foreground">-</TableCell>
+                          )}
+                          {isColumnVisible('discovery') && (
+                            <TableCell className="text-muted-foreground">-</TableCell>
+                          )}
+                          {isColumnVisible('notes') && (
+                            <TableCell className="text-muted-foreground">-</TableCell>
+                          )}
+                        </TableRow>
 
-                  {/* Additional Information Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                      <h4 className="text-sm font-semibold text-foreground">Additional Information</h4>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="discoveredVia">Discovery Method <span className="text-muted-foreground">(Optional)</span></Label>
-                        <Select 
-                          value={newAsset.discoveredVia} 
-                          onValueChange={(value) => setNewAsset({...newAsset, discoveredVia: value as any})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="manual">Manual Entry</SelectItem>
-                            <SelectItem value="nmap">Nmap Scan</SelectItem>
-                            <SelectItem value="ssl-cert">SSL Certificate Discovery</SelectItem>
-                            <SelectItem value="http-vhosts">HTTP Virtual Host Discovery</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="notes">Notes <span className="text-muted-foreground">(Optional)</span></Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Additional notes, findings, or context about this asset..."
-                          value={newAsset.notes}
-                          onChange={(e) => setNewAsset({...newAsset, notes: e.target.value})}
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setAddAssetDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleAddAsset}
-                    disabled={!newAsset.ip || !newAsset.port}
-                  >
-                    Add Asset
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            
-            <ImportNmapDialog
-              open={importNmapDialogOpen}
-              onOpenChange={setImportNmapDialogOpen}
-              projectId={projectId}
-            />
+                        {/* Service rows (expanded) */}
+                        {isExpanded && hostGroup.services.map((asset: Asset) => (
+                          <TableRow
+                            key={asset.id}
+                            className="group/service hover:bg-muted/30 transition-colors"
+                          >
+                            <TableCell></TableCell>
+                            {isColumnVisible('status') && (
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                      {getStatusIcon(asset.status)}
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="start">
+                                    {(["not_tested", "testing", "clean", "vulnerable", "exploitable"] as ServiceStatus[]).map((status) => (
+                                      <DropdownMenuCheckboxItem
+                                        key={status}
+                                        checked={asset.status === status}
+                                        onCheckedChange={() => handleStatusChange(asset.id, status)}
+                                      >
+                                        {status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                      </DropdownMenuCheckboxItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('host') && (
+                              <TableCell className="font-mono text-sm">
+                                <div className="flex items-center gap-2 pl-6">
+                                  <span className="text-muted-foreground">└─</span>
+                                  <span
+                                    className="hover:text-primary cursor-pointer"
+                                    onClick={() => handleEditAsset(asset)}
+                                  >
+                                    {asset.port}/{asset.protocol}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 opacity-0 group-hover/service:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditAsset(asset);
+                                    }}
+                                    title="Edit service"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 opacity-0 group-hover/service:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Delete service ${asset.ip}:${asset.port}?`)) {
+                                        deleteAsset(projectId, asset.id);
+                                      }
+                                    }}
+                                    title="Delete service"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('service') && (
+                              <TableCell>
+                                {(() => {
+                                  const serviceName = extractServiceFromNotes(asset.notes);
+                                  return serviceName ? (
+                                    <Badge variant="secondary" className="text-xs font-mono">
+                                      {serviceName}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  );
+                                })()}
+                              </TableCell>
+                            )}
+                            {isColumnVisible('hostnames') && (
+                              <TableCell className="text-muted-foreground">-</TableCell>
+                            )}
+                            {isColumnVisible('vhosts') && (
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {asset.vhosts?.length ? (
+                                    asset.vhosts.map(vhost => (
+                                      <Badge key={vhost} className="text-xs bg-blue-100 text-blue-800 border-blue-200">
+                                        {vhost}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('tags') && (
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {asset.tags.length > 0 ? (
+                                    asset.tags.map((tag) => (
+                                      <Badge
+                                        key={tag.id}
+                                        className={`text-xs ${tag.color} text-white border-0 cursor-pointer hover:opacity-80 transition-opacity ${tagFilter === tag.id ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
+                                        onClick={(e) => handleTagClick(tag.id, e)}
+                                        title={`Click to filter by "${tag.name}"`}
+                                      >
+                                        {tag.name}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditAsset(asset);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('discovery') && (
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs cursor-pointer hover:bg-muted ${discoveryFilter === asset.discovered_via ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (discoveryFilter === asset.discovered_via) {
+                                      setDiscoveryFilter("all");
+                                    } else {
+                                      setDiscoveryFilter(asset.discovered_via as DiscoveryMethod);
+                                    }
+                                  }}
+                                  title={`Click to filter by "${asset.discovered_via}"`}
+                                >
+                                  {asset.discovered_via}
+                                </Badge>
+                              </TableCell>
+                            )}
+                            {isColumnVisible('notes') && (
+                              <TableCell className="text-sm text-muted-foreground max-w-48 truncate">
+                                {asset.notes || "-"}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="flex-1 flex flex-col overflow-hidden px-3">
-        <ScrollArea className="flex-1">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-b border-border/60">
-                <TableHead className="w-32">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleSort("status")}
-                    className="h-8 p-0 hover:bg-transparent"
-                  >
-                    Status
-                    {getSortIcon("status")}
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-48">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleSort("target")}
-                    className="h-8 p-0 hover:bg-transparent"
-                  >
-                    Host / Service
-                    {getSortIcon("target")}
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-32">Hostnames</TableHead>
-                <TableHead className="min-w-32">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleSort("vhost")}
-                    className="h-8 p-0 hover:bg-transparent"
-                  >
-                    Virtual Hosts
-                    {getSortIcon("vhost")}
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-32">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleSort("tags")}
-                    className="h-8 p-0 hover:bg-transparent"
-                  >
-                    Tags
-                    {getSortIcon("tags")}
-                  </Button>
-                </TableHead>
-                <TableHead className="w-32">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleSort("discoveredVia")}
-                    className="h-8 p-0 hover:bg-transparent"
-                  >
-                    Discovery
-                    {getSortIcon("discoveredVia")}
-                  </Button>
-                </TableHead>
-                <TableHead className="min-w-64">Notes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedHostGroups.map((hostGroup) => {
-                const isExpanded = expandedHosts.has(hostGroup.ip);
-                return (
-                  <React.Fragment key={hostGroup.ip}>
-                    {renderHostGroupRow(hostGroup)}
-                    {isExpanded && hostGroup.services.map(service => 
-                      renderServiceRow(service, true)
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
-          
-          {loading && (
-            <div className="flex items-center justify-center h-32 text-center">
-              <div className="space-y-2">
-                <p className="text-muted-foreground">Loading assets...</p>
-              </div>
-            </div>
-          )}
-          
-          {!loading && paginatedHostGroups.length === 0 && (
-            <div className="flex items-center justify-center h-32 text-center">
-              <div className="space-y-2">
-                <p className="text-muted-foreground">No assets found</p>
-                <p className="text-sm text-muted-foreground">
-                  {error ? `Error: ${error}` : "Try adjusting your search or filters"}
-                </p>
-              </div>
-            </div>
-          )}
-        </ScrollArea>
-        
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t border-border/40 bg-background">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} hosts
+        {/* Pagination - always visible */}
+        <div className="flex-shrink-0 p-4 border-t border-border">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                Showing {totalItems > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, totalItems)} of {totalItems} hosts
               </span>
-              <Select 
-                value={itemsPerPage.toString()} 
+              <Select
+                value={itemsPerPage.toString()}
                 onValueChange={(value) => {
                   setItemsPerPage(parseInt(value));
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-20 h-8">
+                <SelectTrigger className="h-8 w-[70px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
+                  {[10, 20, 50, 100].map((size) => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(1)}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2"
-              >
-                First
-              </Button>
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="h-8 px-2"
               >
                 Previous
               </Button>
-              
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
@@ -1151,59 +975,62 @@ export function ScopeTable({ projectId }: ScopeTableProps) {
                   } else {
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <Button
-                      key={pageNum}
+                      key={i}
                       variant={currentPage === pageNum ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(pageNum)}
-                      className="h-8 w-8 p-0"
+                      className="w-8"
                     >
                       {pageNum}
                     </Button>
                   );
                 })}
               </div>
-              
-              <Button
-                variant="outline"
-                size="sm" 
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="h-8 px-2"
-              >
-                Next
-              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="h-8 px-2"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
               >
-                Last
+                Next
               </Button>
             </div>
           </div>
-        )}
+        </div>
       </div>
-    </div>
 
-    {/* Edit Asset Dialog */}
-    <EditAssetDialog
-      asset={selectedAsset}
-      hostGroup={selectedHost}
-      open={editAssetDialogOpen}
-      onOpenChange={(open) => {
-        setEditAssetDialogOpen(open);
-        if (!open) {
-          setSelectedAsset(null);
-          setSelectedHost(null);
-        }
-      }}
-      projectId={projectId}
-    />
-  </div>
+      {/* Import Nmap Dialog */}
+      <ImportNmapDialog
+        open={importNmapDialogOpen}
+        onOpenChange={setImportNmapDialogOpen}
+        projectId={projectId}
+      />
+
+      {/* Edit Asset Dialog */}
+      <EditAssetDialog
+        asset={selectedAsset}
+        hostGroup={selectedHost}
+        open={editAssetDialogOpen}
+        onOpenChange={(open) => {
+          setEditAssetDialogOpen(open);
+          if (!open) {
+            setSelectedAsset(null);
+            setSelectedHost(null);
+          }
+        }}
+        projectId={projectId}
+      />
+
+      {/* Add Asset Dialog */}
+      <AddAssetDialog
+        open={addAssetDialogOpen}
+        onOpenChange={setAddAssetDialogOpen}
+        projectId={projectId}
+      />
+    </>
   );
 }

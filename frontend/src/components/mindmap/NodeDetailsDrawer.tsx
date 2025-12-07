@@ -24,6 +24,7 @@ import {
   Bug,
   Terminal,
   Tag,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -177,6 +178,8 @@ export function NodeDetailsDrawer({
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [commandSearch, setCommandSearch] = useState("");
   const [deleteTagsDialogOpen, setDeleteTagsDialogOpen] = useState(false);
+  const [deleteCommandDialogOpen, setDeleteCommandDialogOpen] = useState(false);
+  const [commandToDelete, setCommandToDelete] = useState<string | null>(null);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [expandedCommands, setExpandedCommands] = useState<Set<string>>(
     new Set()
@@ -693,20 +696,25 @@ export function NodeDetailsDrawer({
   };
 
   const handleDeleteCommand = async (commandId: string) => {
-    if (
-      !selectedNodeId ||
-      !confirm("Are you sure you want to delete this command?")
-    )
-      return;
+    if (!selectedNodeId) return;
+    setCommandToDelete(commandId);
+    setDeleteCommandDialogOpen(true);
+  };
+
+  const confirmDeleteCommand = async () => {
+    if (!selectedNodeId || !commandToDelete) return;
 
     try {
       await deleteCommand.mutateAsync({
         projectId,
         nodeId: selectedNodeId,
-        commandId,
+        commandId: commandToDelete,
       });
     } catch (error) {
       // Error toast is handled by the hook
+    } finally {
+      setDeleteCommandDialogOpen(false);
+      setCommandToDelete(null);
     }
   };
 
@@ -821,7 +829,7 @@ export function NodeDetailsDrawer({
             "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
             "data-[state=open]:animate-none data-[state=closed]:animate-none",
             "inset-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-            "w-full max-w-[960px] sm:max-w-[90vw] h-[85vh]",
+            "w-full max-w-[800px] sm:max-w-[85vw] h-[85vh]",
             "border border-border bg-background shadow-xl rounded-2xl",
             "overflow-hidden flex flex-col p-0",
             "transition-all duration-300",
@@ -829,21 +837,21 @@ export function NodeDetailsDrawer({
           )}
         >
           <SheetHeader className="flex flex-col space-y-2 text-center sm:text-left border-b border-border shrink-0">
-            <div className="flex p-3 items-center justify-between gap-4">
-              <SheetTitle className="font-semibold flex items-center text-foreground flex-1 text-base">
+            <div className="flex p-4 items-center gap-3">
+              <SheetTitle className="font-semibold flex items-center text-foreground flex-1 min-w-0 text-base">
                 {editingTitle ? (
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Input
                       ref={titleInputRef}
                       value={localTitle}
                       onChange={(e) => setLocalTitle(e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, "title")}
-                      className="text-base font-semibold"
+                      className="text-base font-semibold flex-1"
                     />
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8"
+                      className="h-8 w-8 shrink-0"
                       onClick={handleTitleSave}
                     >
                       <Check className="h-4 w-4" />
@@ -851,7 +859,7 @@ export function NodeDetailsDrawer({
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8"
+                      className="h-8 w-8 shrink-0"
                       onClick={() => {
                         setLocalTitle(node.title);
                         setEditingTitle(false);
@@ -861,16 +869,17 @@ export function NodeDetailsDrawer({
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 group rounded-lg px-2 flex-1 min-w-0 cursor-pointer hover:bg-muted/50">
-                    <div
-                      className="py-1 rounded flex items-center gap-2 w-full"
-                      onClick={() => !isReadOnly && setEditingTitle(true)}
-                    >
-                      <span className="truncate max-w-[420px] flex-1">
-                        {node.title}
-                      </span>
-                      <Edit2 className="h-3.5 w-3.5 transition-opacity shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground" />
-                    </div>
+                  <div
+                    className="group/title flex items-center gap-2 flex-1 min-w-0 cursor-pointer rounded-lg px-2 py-1 -mx-2 hover:bg-muted/50 transition-colors"
+                    onClick={() => !isReadOnly && setEditingTitle(true)}
+                    title={isReadOnly ? node.title : "Click to edit title"}
+                  >
+                    <span className="line-clamp-2 flex-1 min-w-0">
+                      {node.title}
+                    </span>
+                    {!isReadOnly && (
+                      <Edit2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity" />
+                    )}
                   </div>
                 )}
               </SheetTitle>
@@ -882,7 +891,7 @@ export function NodeDetailsDrawer({
                 disabled={isReadOnly}
               >
                 <SelectTrigger
-                  className="w-[160px] shrink-0 font-medium h-8 px-2"
+                  className="w-[140px] shrink-0 font-medium h-8 px-2"
                   disabled={isReadOnly}
                 >
                   <SelectValue />
@@ -915,16 +924,15 @@ export function NodeDetailsDrawer({
                   <SelectItem value="NOT_APPLICABLE">
                     <div className="flex items-center gap-2">
                       <HelpCircle className="h-4 w-4 text-neutral-500" />
-                      Not Applicable
+                      N/A
                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <div className="h-6 w-px bg-border/70 mx-2" />
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
                 onClick={() => setDrawerOpen(false)}
               >
                 <X className="h-4 w-4" />
@@ -993,70 +1001,90 @@ export function NodeDetailsDrawer({
               </TabsContent>
 
               <TabsContent value="findings" className="mt-0 space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="finding-date" className="text-sm font-medium">
-                      Date:
-                    </Label>
-                    <Input
-                      id="finding-date"
-                      type="datetime-local"
-                      value={findingDate && !isNaN(findingDate.getTime()) ? findingDate.toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}
-                      onChange={(e) => {
-                        const date = new Date(e.target.value);
-                        if (!isNaN(date.getTime())) {
-                          setFindingDate(date);
-                          debouncedUpdateFinding(findingContent, date);
-                        }
-                      }}
-                      className="w-48"
-                      disabled={isReadOnly}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const now = new Date();
-                        setFindingDate(now);
-                        debouncedUpdateFinding(findingContent, now);
-                      }}
-                      disabled={isReadOnly}
-                    >
-                      Now
-                    </Button>
-                    {nodeFinding.data && !isReadOnly && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={async () => {
-                                if (!selectedNodeId) return;
-                                try {
-                                  await deleteFinding.mutateAsync({
-                                    projectId,
-                                    nodeId: selectedNodeId,
-                                  });
-                                  // Clear local state
-                                  setFindingContent("");
-                                  setFindingDate(new Date());
-                                } catch (error) {
-                                  console.error("Delete finding error:", error);
-                                }
-                              }}
-                              className="hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Delete Finding</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
+                <div className="space-y-3">
+                  {/* Compact date bar - only show when there's content or existing finding */}
+                  {(findingContent || nodeFinding.data) && (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/40 border border-border/50">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Timeline:</span>
+                        <Input
+                          id="finding-date"
+                          type="datetime-local"
+                          value={findingDate && !isNaN(findingDate.getTime()) ? findingDate.toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)}
+                          onChange={(e) => {
+                            const date = new Date(e.target.value);
+                            if (!isNaN(date.getTime())) {
+                              setFindingDate(date);
+                              debouncedUpdateFinding(findingContent, date);
+                            }
+                          }}
+                          className="w-44 h-7 text-xs bg-background"
+                          disabled={isReadOnly}
+                        />
+                        {!isReadOnly && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const now = new Date();
+                              setFindingDate(now);
+                              debouncedUpdateFinding(findingContent, now);
+                            }}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Set to now
+                          </Button>
+                        )}
+                      </div>
+                      {nodeFinding.data && !isReadOnly && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  if (!selectedNodeId) return;
+                                  try {
+                                    await deleteFinding.mutateAsync({
+                                      projectId,
+                                      nodeId: selectedNodeId,
+                                    });
+                                    // Clear local state
+                                    setFindingContent("");
+                                    setFindingDate(new Date());
+                                  } catch (error) {
+                                    console.error("Delete finding error:", error);
+                                  }
+                                }}
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete Finding</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Empty state hint - show only when no content */}
+                  {!findingContent && !nodeFinding.data && !isReadOnly && (
+                    <div className="text-center py-4 px-3 rounded-lg bg-muted/30 border border-dashed border-border/50">
+                      <Bug className="h-6 w-6 mx-auto mb-2 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">
+                        Document security findings, vulnerabilities, or test results
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        Findings are timestamped and appear in the project timeline
+                      </p>
+                    </div>
+                  )}
+
                   <TipTapEditor
                     initialContent={findingContent}
                     onChange={(value) => {
@@ -1370,26 +1398,36 @@ export function NodeDetailsDrawer({
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {node?.tags?.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="cursor-pointer group flex items-center gap-1 max-w-full"
-                      >
-                        <span className="truncate">{tag}</span>
-                        {!isReadOnly && (
-                          <Button
-                            variant="ghost"
-                            className="h-4 w-4 p-0 group-hover:opacity-100 transition-opacity shrink-0"
-                            onClick={() => handleRemoveTag(tag)}
-                          >
-                            <X className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        )}
-                      </Badge>
-                    ))}
-                  </div>
+                  {node?.tags && node.tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {node.tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="cursor-pointer group flex items-center gap-1 max-w-full"
+                        >
+                          <span className="truncate">{tag}</span>
+                          {!isReadOnly && (
+                            <Button
+                              variant="ghost"
+                              className="h-4 w-4 p-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => handleRemoveTag(tag)}
+                            >
+                              <X className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No tags added yet</p>
+                      {!isReadOnly && (
+                        <p className="text-xs mt-1">Type above to add tags</p>
+                      )}
+                    </div>
+                  )}
 
                   <AlertDialog
                     open={deleteTagsDialogOpen}
@@ -1418,6 +1456,34 @@ export function NodeDetailsDrawer({
               </TabsContent>
             </div>
           </Tabs>
+
+          {/* Delete Command Confirmation Dialog */}
+          <AlertDialog
+            open={deleteCommandDialogOpen}
+            onOpenChange={(open) => {
+              setDeleteCommandDialogOpen(open);
+              if (!open) setCommandToDelete(null);
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete command?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete
+                  this command from the node.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteCommand}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Close button outside the sheet */}
           <Button

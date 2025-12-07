@@ -209,20 +209,80 @@ async def create_asset_for_project(
     session: AsyncSession, asset_in: ScopeAssetCreate, project_id: UUID, owner_id: UUID
 ) -> Optional[ScopeAsset]:
     """Create a new scope asset for a project"""
-    
+
     asset_data = await session.execute_write(
         _create_asset_for_project_tx,
         asset_in=asset_in,
         project_id=project_id,
         owner_id=owner_id
     )
-    
+
     if not asset_data:
         return None
-        
+
     # Convert to ScopeAsset object - get the asset_id from the returned data
     asset_id = UUID(asset_data["id"])
     return await get_asset_by_id(session, asset_id, project_id, owner_id)
+
+
+async def create_or_merge_asset_for_project(
+    session: AsyncSession, asset_in: ScopeAssetCreate, project_id: UUID, owner_id: UUID
+) -> tuple[Optional[ScopeAsset], bool]:
+    """
+    Create a new scope asset or merge with existing one.
+
+    Returns:
+        Tuple of (asset, was_created) where was_created is True if new, False if merged
+    """
+    # First check if asset exists
+    existing_query = """
+    MATCH (user:User {id: $owner_id})-[:OWNS]->(project:Project {id: $project_id})-[:HAS_SCOPE_ASSET]->(asset:ScopeAsset)
+    WHERE asset.ip = $ip AND asset.port = $port AND asset.protocol = $protocol
+    RETURN asset
+    """
+
+    result = await session.run(existing_query,
+                               owner_id=str(owner_id),
+                               project_id=str(project_id),
+                               ip=asset_in.ip,
+                               port=asset_in.port,
+                               protocol=asset_in.protocol)
+    existing_record = await result.single()
+
+    if existing_record:
+        # Asset exists - merge data
+        existing_data = existing_record["asset"]
+        asset_id = UUID(existing_data["id"])
+
+        # Merge hostnames (add new ones, keep existing)
+        existing_hostnames = existing_data.get("hostnames", []) or []
+        new_hostnames = list(set(existing_hostnames + (asset_in.hostnames or [])))
+
+        # Merge vhosts
+        existing_vhosts = existing_data.get("vhosts", []) or []
+        new_vhosts = list(set(existing_vhosts + (asset_in.vhosts or [])))
+
+        # Append notes if there's new content
+        existing_notes = existing_data.get("notes", "") or ""
+        new_notes = asset_in.notes or ""
+        if new_notes and new_notes not in existing_notes:
+            merged_notes = f"{existing_notes}\n---\n{new_notes}".strip() if existing_notes else new_notes
+        else:
+            merged_notes = existing_notes
+
+        # Update the existing asset with merged data
+        update_data = ScopeAssetUpdate(
+            hostnames=new_hostnames,
+            vhosts=new_vhosts,
+            notes=merged_notes
+        )
+
+        updated_asset = await update_asset_in_project(session, asset_id, update_data, project_id, owner_id)
+        return (updated_asset, False)  # False = was merged, not created
+    else:
+        # No existing asset - create new one
+        new_asset = await create_asset_for_project(session, asset_in, project_id, owner_id)
+        return (new_asset, True)  # True = was created
 
 async def update_asset_in_project(
     session: AsyncSession, asset_id: UUID, asset_in: ScopeAssetUpdate, project_id: UUID, owner_id: UUID

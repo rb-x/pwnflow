@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Placeholder from '@tiptap/extension-placeholder';
 import Highlight from '@tiptap/extension-highlight';
@@ -16,9 +17,6 @@ import {
   ListOrdered,
   Undo,
   Redo,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Heading1,
   Heading2,
   Heading3,
@@ -31,10 +29,27 @@ import {
   Minus,
   FileCode,
   Eye,
+  Check,
+  Unlink,
+  Image as ImageIcon,
+  Pilcrow,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 interface TipTapEditorProps {
@@ -53,8 +68,14 @@ export function TipTapEditor({
   const [isLocked, setIsLocked] = useState(readOnly);
   const [showRawMarkdown, setShowRawMarkdown] = useState(false);
   const [rawMarkdown, setRawMarkdown] = useState(initialContent);
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
   const lastContentRef = useRef<string>('');
   const isInitializedRef = useRef(false);
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Create lowlight instance with common languages
   const lowlight = createLowlight(common);
@@ -88,6 +109,17 @@ export function TipTapEditor({
         HTMLAttributes: {
           class: 'text-primary underline',
         },
+        validate: (href) => {
+          // Only allow http, https, mailto, and tel protocols
+          const allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
+          try {
+            const url = new URL(href, 'https://example.com');
+            return allowedProtocols.includes(url.protocol);
+          } catch {
+            // If it's not a valid URL, check if it starts with allowed protocols
+            return /^(https?:\/\/|mailto:|tel:)/i.test(href);
+          }
+        },
       }),
       CodeBlockLowlight.configure({
         lowlight,
@@ -103,6 +135,13 @@ export function TipTapEditor({
         multicolor: false,
       }),
       Underline,
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: {
+          class: 'rounded-md max-w-full',
+        },
+      }),
     ],
     content: '',
     editorProps: {
@@ -311,34 +350,58 @@ export function TipTapEditor({
 
           <Separator orientation="vertical" className="h-6" />
 
-          {/* Headings */}
-          <Button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            variant={editor.isActive('heading', { level: 1 }) ? 'secondary' : 'ghost'}
-            size="sm"
-            disabled={isLocked}
-            className="h-8 w-8 p-0"
-          >
-            <Heading1 className="h-4 w-4" />
-          </Button>
-          <Button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            variant={editor.isActive('heading', { level: 2 }) ? 'secondary' : 'ghost'}
-            size="sm"
-            disabled={isLocked}
-            className="h-8 w-8 p-0"
-          >
-            <Heading2 className="h-4 w-4" />
-          </Button>
-          <Button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            variant={editor.isActive('heading', { level: 3 }) ? 'secondary' : 'ghost'}
-            size="sm"
-            disabled={isLocked}
-            className="h-8 w-8 p-0"
-          >
-            <Heading3 className="h-4 w-4" />
-          </Button>
+          {/* Block Type Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isLocked}
+                className="h-8 px-2 gap-1"
+              >
+                {editor.isActive('heading', { level: 1 }) ? (
+                  <Heading1 className="h-4 w-4" />
+                ) : editor.isActive('heading', { level: 2 }) ? (
+                  <Heading2 className="h-4 w-4" />
+                ) : editor.isActive('heading', { level: 3 }) ? (
+                  <Heading3 className="h-4 w-4" />
+                ) : (
+                  <Pilcrow className="h-4 w-4" />
+                )}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onClick={() => editor.chain().focus().setParagraph().run()}
+                className={cn(editor.isActive('paragraph') && !editor.isActive('heading') && 'bg-accent')}
+              >
+                <Pilcrow className="h-4 w-4 mr-2" />
+                Paragraph
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                className={cn(editor.isActive('heading', { level: 1 }) && 'bg-accent')}
+              >
+                <Heading1 className="h-4 w-4 mr-2" />
+                Heading 1
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                className={cn(editor.isActive('heading', { level: 2 }) && 'bg-accent')}
+              >
+                <Heading2 className="h-4 w-4 mr-2" />
+                Heading 2
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                className={cn(editor.isActive('heading', { level: 3 }) && 'bg-accent')}
+              >
+                <Heading3 className="h-4 w-4 mr-2" />
+                Heading 3
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Separator orientation="vertical" className="h-6" />
 
@@ -380,8 +443,9 @@ export function TipTapEditor({
             size="sm"
             disabled={isLocked}
             className="h-8 w-8 p-0"
+            title="Code Block"
           >
-            <Code className="h-4 w-4" />
+            <FileCode className="h-4 w-4" />
           </Button>
           <Button
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
@@ -392,6 +456,186 @@ export function TipTapEditor({
           >
             <Minus className="h-4 w-4" />
           </Button>
+          <Popover
+            open={linkPopoverOpen}
+            onOpenChange={(open) => {
+              if (open) {
+                // Pre-fill with existing link URL when opening
+                const existingUrl = editor.getAttributes('link').href || '';
+                setLinkUrl(existingUrl);
+              } else {
+                setLinkUrl('');
+              }
+              setLinkPopoverOpen(open);
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant={editor.isActive('link') ? 'secondary' : 'ghost'}
+                size="sm"
+                disabled={isLocked}
+                className="h-8 w-8 p-0"
+                title={editor.isActive('link') ? 'Edit Link' : 'Insert Link'}
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2" align="start" sideOffset={8}>
+              <form
+                className="flex flex-col gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const url = linkUrl.trim();
+                  if (url) {
+                    // Validate URL - only allow safe protocols
+                    const isValidUrl = /^(https?:\/\/|mailto:|tel:)/i.test(url);
+                    const safeUrl = isValidUrl
+                      ? url
+                      : (url.startsWith('//') ? `https:${url}` : `https://${url}`);
+
+                    // Check if there's a selection
+                    const { from, to } = editor.state.selection;
+                    const hasSelection = from !== to;
+
+                    if (hasSelection) {
+                      // Apply link to selected text
+                      editor.chain().focus().setLink({ href: safeUrl }).run();
+                    } else {
+                      // No selection - insert the URL as linked text
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent({
+                          type: 'text',
+                          text: safeUrl,
+                          marks: [{ type: 'link', attrs: { href: safeUrl } }],
+                        })
+                        .run();
+                    }
+                    setLinkPopoverOpen(false);
+                    setLinkUrl('');
+                  }
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    ref={linkInputRef}
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="h-8 text-sm flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setLinkPopoverOpen(false);
+                        setLinkUrl('');
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 shrink-0"
+                    disabled={!linkUrl.trim()}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  {editor.isActive('link') && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        editor.chain().focus().unsetLink().run();
+                        setLinkPopoverOpen(false);
+                        setLinkUrl('');
+                      }}
+                      title="Remove link"
+                    >
+                      <Unlink className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter to apply • Escape to cancel
+                </p>
+              </form>
+            </PopoverContent>
+          </Popover>
+          <Popover
+            open={imagePopoverOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                setImageUrl('');
+              }
+              setImagePopoverOpen(open);
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isLocked}
+                className="h-8 w-8 p-0"
+                title="Insert Image"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2" align="start" sideOffset={8}>
+              <form
+                className="flex flex-col gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const url = imageUrl.trim();
+                  if (url) {
+                    // Validate URL - only allow http/https for images
+                    const isValidUrl = /^https?:\/\//i.test(url);
+                    const safeUrl = isValidUrl
+                      ? url
+                      : (url.startsWith('//') ? `https:${url}` : `https://${url}`);
+
+                    editor.chain().focus().setImage({ src: safeUrl }).run();
+                    setImagePopoverOpen(false);
+                    setImageUrl('');
+                  }
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    ref={imageInputRef}
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://example.com/image.png"
+                    className="h-8 text-sm flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setImagePopoverOpen(false);
+                        setImageUrl('');
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 shrink-0"
+                    disabled={!imageUrl.trim()}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter to insert • Escape to cancel
+                </p>
+              </form>
+            </PopoverContent>
+          </Popover>
 
           <Separator orientation="vertical" className="h-6" />
 

@@ -254,33 +254,32 @@ async def import_nmap_scan(
             'open_ports_only': request.open_ports_only,
             'default_status': request.default_status
         }
-        
+
         parsed_assets, import_stats = parse_nmap_xml(request.xml_content, parsing_settings)
-        
-        # Create assets in database
+
+        # Reset stats counters (parser already counted, we'll track actual DB operations)
+        import_stats.services_created = 0
+        import_stats.services_updated = 0
+
+        # Create or merge assets in database
         created_assets = []
-        updated_count = 0
-        
+
         for asset_data in parsed_assets:
             try:
-                # Try to create the asset
-                created_asset = await scope_crud.create_asset_for_project(
+                # Create or merge with existing asset
+                asset, was_created = await scope_crud.create_or_merge_asset_for_project(
                     session, asset_in=asset_data, project_id=project_id, owner_id=current_user.id
                 )
-                
-                if created_asset:
-                    created_assets.append(created_asset)
-                    import_stats.services_created += 1
-                else:
-                    # Asset already exists, try to update it instead
-                    # For now, we'll skip duplicate assets
-                    # TODO: Implement merge logic
-                    updated_count += 1
-                    
+
+                if asset:
+                    if was_created:
+                        created_assets.append(asset)
+                        import_stats.services_created += 1
+                    else:
+                        import_stats.services_updated += 1
+
             except Exception as e:
-                import_stats.errors.append(f"Failed to create asset {asset_data.ip}:{asset_data.port} - {str(e)}")
-        
-        import_stats.services_updated = updated_count
+                import_stats.errors.append(f"Failed to process asset {asset_data.ip}:{asset_data.port} - {str(e)}")
         
         # Send WebSocket notification
         await notification_manager.notify_project(str(project_id), "scope_updated", {

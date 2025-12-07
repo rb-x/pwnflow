@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-// import { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useScopeStore, type ServiceStatus } from "@/store/scopeStore";
-import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle2, Info } from "lucide-react";
 
 interface ImportNmapDialogProps {
   open: boolean;
@@ -29,8 +28,8 @@ interface ImportNmapDialogProps {
 }
 
 export function ImportNmapDialog({ open, onOpenChange, projectId }: ImportNmapDialogProps) {
-  const { importNmapXml, loading } = useScopeStore();
-  
+  const { importNmapXml } = useScopeStore();
+
   const [xmlContent, setXmlContent] = useState("");
   const [openPortsOnly, setOpenPortsOnly] = useState(true);
   const [defaultStatus, setDefaultStatus] = useState<ServiceStatus>("not_tested");
@@ -38,9 +37,7 @@ export function ImportNmapDialog({ open, onOpenChange, projectId }: ImportNmapDi
   const [importing, setImporting] = useState(false);
 
   const handleImport = async () => {
-    if (!xmlContent.trim()) {
-      return;
-    }
+    if (!xmlContent.trim()) return;
 
     setImporting(true);
     setImportStats(null);
@@ -53,7 +50,6 @@ export function ImportNmapDialog({ open, onOpenChange, projectId }: ImportNmapDi
 
       if (stats) {
         setImportStats(stats);
-        // Clear the XML content after successful import
         setXmlContent("");
       }
     } catch (error) {
@@ -73,7 +69,7 @@ export function ImportNmapDialog({ open, onOpenChange, projectId }: ImportNmapDi
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === "text/xml") {
+    if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
@@ -90,78 +86,91 @@ export function ImportNmapDialog({ open, onOpenChange, projectId }: ImportNmapDi
     setDefaultStatus("not_tested");
   };
 
+  const handleClose = () => {
+    handleReset();
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Import Nmap Scan
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[550px]">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <Upload className="h-4 w-4 text-primary" />
+            </div>
+            Import Nmap XML
           </DialogTitle>
-          <DialogDescription>
-            Import services and hosts from Nmap XML scan results into your project scope.
+          <DialogDescription className="text-xs mt-1">
+            Import services from an Nmap XML scan file
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6">
-          {/* File Upload Section */}
+        <div className="space-y-4 overflow-hidden">
+          {/* File Upload */}
           <div className="space-y-2">
-            <Label>Upload XML File</Label>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => document.getElementById('xml-file')?.click()}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Choose Nmap XML File
-              </Button>
-              <input
-                id="xml-file"
-                type="file"
-                accept=".xml"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </div>
+            <Button
+              variant="outline"
+              className="w-full h-9"
+              onClick={() => document.getElementById('xml-file')?.click()}
+              disabled={importing}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Choose XML File
+            </Button>
+            <input
+              id="xml-file"
+              type="file"
+              accept=".xml"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
           </div>
 
-          {/* XML Content Input */}
+          {/* XML Content */}
           <div className="space-y-2">
-            <Label>XML Content</Label>
+            <Label className="text-xs text-muted-foreground">XML Content</Label>
             <Textarea
-              placeholder="Paste your Nmap XML output here..."
+              placeholder="Or paste Nmap XML output here..."
               value={xmlContent}
               onChange={(e) => setXmlContent(e.target.value)}
-              className="h-40 font-mono text-sm"
+              className="h-32 font-mono text-xs resize-none"
               disabled={importing}
             />
           </div>
 
-          {/* Import Settings */}
-          <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-            <h4 className="text-sm font-semibold">Import Settings</h4>
-            
+          {/* Info about merge behavior */}
+          {xmlContent.trim() && !importStats && (
+            <div className="flex items-start gap-2 p-3 border rounded-md bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 max-w-full overflow-hidden">
+              <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-300 break-words">
+                Duplicate services (same IP:port) will be merged — new hostnames and notes will be added to existing entries.
+              </p>
+            </div>
+          )}
+
+          {/* Settings */}
+          <div className="space-y-3 p-3 border rounded-md bg-muted/30">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="text-sm">Open Ports Only</Label>
-                <p className="text-xs text-muted-foreground">
-                  Only import open ports, skip closed/filtered ports
-                </p>
+              <div>
+                <Label className="text-xs">Open Ports Only</Label>
+                <p className="text-xs text-muted-foreground">Skip closed/filtered ports</p>
               </div>
-              <input
-                type="checkbox"
+              <Switch
                 checked={openPortsOnly}
-                onChange={(e) => setOpenPortsOnly(e.target.checked)}
+                onCheckedChange={setOpenPortsOnly}
                 disabled={importing}
-                className="rounded"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm">Default Status</Label>
-              <Select value={defaultStatus} onValueChange={(value) => setDefaultStatus(value as ServiceStatus)} disabled={importing}>
-                <SelectTrigger>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Default Status</Label>
+              <Select
+                value={defaultStatus}
+                onValueChange={(value) => setDefaultStatus(value as ServiceStatus)}
+                disabled={importing}
+              >
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -173,77 +182,73 @@ export function ImportNmapDialog({ open, onOpenChange, projectId }: ImportNmapDi
             </div>
           </div>
 
-          {/* Import Results */}
+          {/* Results */}
           {importStats && (
-            <div className="space-y-4 p-4 border rounded-lg">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                {importStats.errors && importStats.errors.length > 0 ? (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
+            <div className="space-y-3 p-3 border rounded-md">
+              <div className="flex items-center gap-2">
+                {importStats.errors?.length > 0 ? (
+                  <AlertCircle className="h-4 w-4 text-destructive" />
                 ) : (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                 )}
-                Import Results
-              </h4>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Hosts Processed:</span>
-                    <Badge variant="outline">{importStats.hosts_processed}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Services Created:</span>
-                    <Badge variant="outline">{importStats.services_created}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Services Updated:</span>
-                    <Badge variant="outline">{importStats.services_updated}</Badge>
-                  </div>
+                <span className="text-xs font-medium">
+                  {importStats.errors?.length > 0 ? "Import completed with errors" : "Import successful"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Hosts:</span>
+                  <Badge variant="secondary" className="h-5 text-xs">{importStats.hosts_processed}</Badge>
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Hostnames Linked:</span>
-                    <Badge variant="outline">{importStats.hostnames_linked}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">VHosts Detected:</span>
-                    <Badge variant="outline">{importStats.vhosts_detected}</Badge>
-                  </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">New:</span>
+                  <Badge variant="secondary" className="h-5 text-xs bg-green-100 text-green-800">{importStats.services_created}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Merged:</span>
+                  <Badge variant="secondary" className="h-5 text-xs bg-blue-100 text-blue-800">{importStats.services_updated}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VHosts:</span>
+                  <Badge variant="secondary" className="h-5 text-xs">{importStats.vhosts_detected}</Badge>
                 </div>
               </div>
 
-              {importStats.errors && importStats.errors.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm text-red-600">Errors:</Label>
-                  <div className="space-y-1">
-                    {importStats.errors.map((error: string, index: number) => (
-                      <div key={index} className="text-xs text-red-600 bg-red-50 p-2 rounded">
-                        {error}
-                      </div>
-                    ))}
-                  </div>
+              {importStats.services_updated > 0 && importStats.errors?.length === 0 && (
+                <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                  Existing services were updated with new hostnames and notes.
+                </p>
+              )}
+
+              {importStats.errors?.length > 0 && (
+                <div className="space-y-1">
+                  {importStats.errors.map((error: string, i: number) => (
+                    <p key={i} className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                      {error}
+                    </p>
+                  ))}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={handleReset} disabled={importing}>
+        <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+          <Button variant="outline" size="sm" onClick={handleReset} disabled={importing}>
             Reset
           </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>
+          <Button variant="outline" size="sm" onClick={handleClose} disabled={importing}>
             Close
           </Button>
-          <Button 
-            onClick={handleImport} 
+          <Button
+            size="sm"
+            onClick={handleImport}
             disabled={!xmlContent.trim() || importing}
-            className="min-w-[100px]"
           >
             {importing ? "Importing..." : "Import"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

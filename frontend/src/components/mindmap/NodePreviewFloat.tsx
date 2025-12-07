@@ -559,12 +559,12 @@ export function NodePreviewFloat({
     >
       <div
         className={cn(
-          "flex items-start justify-between gap-3 p-4 border-b border-border/70",
+          "flex items-start gap-3 p-4 border-b border-border/70",
           onPositionChange ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
         )}
         onPointerDown={handlePointerDown}
       >
-        <div className="flex flex-col gap-2 pr-8">
+        <div className="flex flex-col gap-2 min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
             {isEditingTitle && !isTemplate ? (
               <div
@@ -606,30 +606,25 @@ export function NodePreviewFloat({
                 </Button>
               </div>
             ) : (
-              <>
-                <h3
-                  className="flex-1 truncate text-lg font-semibold leading-tight"
-                  title={displayedTitle}
-                  onDoubleClick={() => {
-                    if (!isTemplate) {
-                      handleStartEditingTitle();
-                    }
-                  }}
-                >
+              <div
+                className="group/title flex items-center gap-2 min-w-0 flex-1 cursor-pointer rounded px-1 -mx-1 hover:bg-muted/50 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isTemplate) {
+                    handleStartEditingTitle();
+                  }
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                title={isTemplate ? displayedTitle : "Click to edit title"}
+                data-node-preview-ignore-close
+              >
+                <h3 className="flex-1 text-base font-semibold leading-tight line-clamp-2">
                   {displayedTitle}
                 </h3>
                 {!isTemplate && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-                    onClick={handleStartEditingTitle}
-                    data-node-preview-ignore-close
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity" />
                 )}
-              </>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

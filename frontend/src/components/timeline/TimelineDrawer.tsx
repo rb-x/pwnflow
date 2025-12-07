@@ -10,30 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Calendar,
-  Clock,
   FileText,
-  Target,
-  AlertTriangle,
-  Shield,
-  Zap,
-  Search,
-  Filter,
   ExternalLink,
 } from "lucide-react";
 import { findingsApi } from "@/services/api/findings";
-import { format, formatDistanceToNow, isToday, isYesterday, startOfDay, isWithinInterval } from "date-fns";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import type { DateRange } from "react-day-picker";
+import { format, startOfDay, subDays, startOfWeek, startOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigateToNode } from "@/hooks/useNavigateToNode";
 import { toast } from "sonner";
@@ -43,20 +26,15 @@ interface TimelineEvent {
   node_id?: string;
   node_title?: string;
   content?: string;
-  date: string; // User-specified date for findings
+  date: string;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
-  
-  // Legacy fields for backwards compatibility
+  // Legacy fields
   id?: string;
-  type?: "finding" | "scope_change" | "status_update" | "import";
   title?: string;
   description?: string;
-  severity?: "critical" | "high" | "medium" | "low" | "info";
-  status?: "exploitable" | "vulnerable" | "clean" | "testing" | "not_tested";
   nodeId?: string;
-  metadata?: Record<string, any>;
 }
 
 interface TimelineDrawerProps {
@@ -65,12 +43,38 @@ interface TimelineDrawerProps {
   projectId: string;
 }
 
+type DatePreset = "all" | "today" | "yesterday" | "week" | "month";
+
 export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawerProps) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [severityFilter, setSeverityFilter] = useState<"all" | "critical" | "high" | "medium" | "low" | "info">("all");
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const navigateToNode = useNavigateToNode();
+
+  const hasActiveFilters = datePreset !== "all";
+
+  const clearFilters = () => {
+    setDatePreset("all");
+  };
+
+  const getDateRangeFromPreset = (preset: DatePreset): { from: Date; to: Date } | null => {
+    const now = new Date();
+    const today = startOfDay(now);
+
+    switch (preset) {
+      case "today":
+        return { from: today, to: now };
+      case "yesterday":
+        const yesterday = subDays(today, 1);
+        return { from: yesterday, to: today };
+      case "week":
+        return { from: startOfWeek(now), to: now };
+      case "month":
+        return { from: startOfMonth(now), to: now };
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     if (open && projectId) {
@@ -91,116 +95,10 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
     }
   };
 
-  // Detect severity from finding content
-  type SeverityLevel = "critical" | "high" | "medium" | "low" | "info";
-
-  const detectSeverity = (content: string): SeverityLevel => {
-    const lowerContent = content.toLowerCase();
-    if (lowerContent.includes('critical') || lowerContent.includes('exploit') || lowerContent.includes('rce')) {
-      return 'critical';
-    }
-    if (lowerContent.includes('high') || lowerContent.includes('sql injection') || lowerContent.includes('xss')) {
-      return 'high';
-    }
-    if (lowerContent.includes('medium') || lowerContent.includes('csrf') || lowerContent.includes('authentication')) {
-      return 'medium';
-    }
-    if (lowerContent.includes('low') || lowerContent.includes('disclosure') || lowerContent.includes('enum')) {
-      return 'low';
-    }
-    return 'info';
+  const getEventIcon = () => {
+    return <FileText className="h-4 w-4 text-blue-500" />;
   };
 
-  const getEventSeverity = (event: TimelineEvent): SeverityLevel | null => {
-    if (event.severity) return event.severity as SeverityLevel;
-    if (event.metadata?.severity) return event.metadata.severity as SeverityLevel;
-    if (event.content) return detectSeverity(event.content);
-    return null;
-  };
-
-  const getEventIcon = (event: TimelineEvent) => {
-    // For now, all timeline events are findings, so show finding icon
-    if (event.finding_id || event.type === "finding") {
-      return <FileText className="h-4 w-4 text-blue-500" />;
-    }
-    
-    // Legacy logic for other event types
-    switch (event.type) {
-      case "scope_change":
-        return <Target className="h-4 w-4 text-blue-500" />;
-      case "status_update":
-        return getStatusIcon(event.status);
-      case "import":
-        return <Search className="h-4 w-4 text-green-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getSeverityIcon = (severity?: string) => {
-    switch (severity) {
-      case "critical":
-        return <AlertTriangle className="h-4 w-4 text-red-600 fill-red-600" />;
-      case "high":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case "medium":
-        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-      case "low":
-        return <Shield className="h-4 w-4 text-yellow-500" />;
-      case "info":
-        return <FileText className="h-4 w-4 text-blue-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getStatusIcon = (status?: string) => {
-    switch (status) {
-      case "exploitable":
-        return <Zap className="h-4 w-4 text-black fill-black" />;
-      case "vulnerable":
-        return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      case "clean":
-        return <Shield className="h-4 w-4 text-green-500" />;
-      case "testing":
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getSeverityBadge = (severity?: string) => {
-    const styles = {
-      critical: "bg-red-600 text-white",
-      high: "bg-red-500 text-white",
-      medium: "bg-orange-500 text-white",
-      low: "bg-yellow-500 text-black",
-      info: "bg-blue-500 text-white",
-    };
-
-    if (!severity) return null;
-
-    return (
-      <Badge className={styles[severity as keyof typeof styles] || "bg-gray-500 text-white"}>
-        {severity.toUpperCase()}
-      </Badge>
-    );
-  };
-
-  const formatEventDate = (date: string) => {
-    const eventDate = new Date(date);
-    const now = new Date();
-
-    if (isToday(eventDate)) {
-      return `Today at ${format(eventDate, "HH:mm")}`;
-    }
-    
-    if (isYesterday(eventDate)) {
-      return `Yesterday at ${format(eventDate, "HH:mm")}`;
-    }
-
-    return format(eventDate, "MMM d, yyyy 'at' HH:mm");
-  };
 
   const groupEventsByDate = (events: TimelineEvent[]) => {
     const groups: Record<string, TimelineEvent[]> = {};
@@ -223,34 +121,15 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
 
   const filteredEvents = events.filter(event => {
     const eventDate = new Date(event.date);
-    
-    // Date range filtering with time precision
-    if (dateRange?.from && dateRange?.to) {
-      // Include all times on the end date
-      const endOfToDate = new Date(dateRange.to);
-      endOfToDate.setHours(23, 59, 59, 999);
-      
-      if (!isWithinInterval(eventDate, { start: dateRange.from, end: endOfToDate })) {
-        return false;
-      }
-    } else if (dateRange?.from) {
-      // Start from beginning of fromDate
-      const startOfFromDate = new Date(dateRange.from);
-      startOfFromDate.setHours(0, 0, 0, 0);
-      
-      if (eventDate < startOfFromDate) {
+
+    // Date preset filtering
+    const dateRange = getDateRangeFromPreset(datePreset);
+    if (dateRange) {
+      if (eventDate < dateRange.from || eventDate > dateRange.to) {
         return false;
       }
     }
 
-    // Severity filtering
-    if (severityFilter !== "all") {
-      const detectedSeverity = getEventSeverity(event);
-      if (!detectedSeverity || detectedSeverity !== severityFilter) {
-        return false;
-      }
-    }
-    
     return true;
   });
 
@@ -280,65 +159,36 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
           </SheetHeader>
 
           {/* Filters */}
-          <div className="border-b border-border/60 bg-card/40 px-5 py-4">
-            <div className="space-y-4 rounded-xl border border-border/70 bg-background/70 p-4 shadow-sm">
-              <div className="grid gap-3">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                  Date Range
-                </label>
-                <DateRangePicker
-                  onUpdate={(values) => setDateRange(values.range)}
-                  align="start"
-                  showCompare={false}
-                  className="w-full"
-                />
+          <div className="border-b border-border/60 bg-card/40 px-5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Date Presets */}
+              <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-background/70 p-1">
+                {[
+                  { value: "all", label: "All" },
+                  { value: "today", label: "Today" },
+                  { value: "yesterday", label: "Yesterday" },
+                  { value: "week", label: "This Week" },
+                  { value: "month", label: "This Month" },
+                ].map(({ value, label }) => (
+                  <Button
+                    key={value}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-7 px-2.5 text-xs",
+                      datePreset === value && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                    )}
+                    onClick={() => setDatePreset(value as DatePreset)}
+                  >
+                    {label}
+                  </Button>
+                ))}
               </div>
-              <div className="grid gap-3">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                  Severity
-                </label>
-                <Select
-                  value={severityFilter}
-                  onValueChange={(value: any) => setSeverityFilter(value)}
-                >
-                  <SelectTrigger className="h-9 w-full rounded-lg border-border/70 bg-background/80 text-sm">
-                    <SelectValue placeholder="Filter by severity" />
-                  </SelectTrigger>
-                  <SelectContent className="w-[220px]">
-                    <SelectItem value="all">All Severities</SelectItem>
-                    <SelectItem value="critical">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-red-500" />
-                        Critical
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="high">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-red-400" />
-                        High
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-orange-400" />
-                        Medium
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="low">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-yellow-400" />
-                        Low
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="info">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-blue-400" />
-                        Info
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+              {/* Results count */}
+              <span className="ml-auto text-xs text-muted-foreground">
+                {filteredEvents.length} {filteredEvents.length === 1 ? "finding" : "findings"}
+              </span>
             </div>
           </div>
 
@@ -357,7 +207,7 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
                   No timeline events yet
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {dateRange?.from || dateRange?.to || severityFilter !== "all"
+                  {hasActiveFilters
                     ? "Try adjusting your filters"
                     : "Findings will appear here as you document them"}
                 </div>
@@ -426,34 +276,12 @@ export function TimelineDrawer({ open, onOpenChange, projectId }: TimelineDrawer
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                  {/* Severity Badge */}
-                                  {(() => {
-                                    const severity = getEventSeverity(event);
-                                    if (!severity) return null;
-                                    if (severity === "info") return null;
-                                    return (
-                                    <Badge
-                                      className={cn(
-                                        "text-[10px] font-semibold tracking-[0.08em] uppercase px-2 py-0.5 leading-tight",
-                                        {
-                                          "border border-red-500/40 bg-red-500/10 text-red-200": severity === "critical",
-                                          "border border-red-400/40 bg-red-400/10 text-red-200": severity === "high",
-                                          "border border-orange-400/40 bg-orange-400/10 text-orange-200": severity === "medium",
-                                          "border border-yellow-400/40 bg-yellow-400/10 text-yellow-100": severity === "low",
-                                        }
-                                      )}
-                                    >
-                                      {severity.toUpperCase()}
-                                    </Badge>
-                                    );
-                                  })()}
-
                                   {event.created_by && (
                                     <div className="text-xs text-muted-foreground">
                                       by {event.created_by}
                                     </div>
                                   )}
-                                  
+
                                   {(event.node_id || event.nodeId) && (
                                     <Button
                                       variant="ghost"
