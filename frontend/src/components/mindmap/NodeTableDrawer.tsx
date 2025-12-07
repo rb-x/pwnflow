@@ -71,6 +71,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useProjectNodes, useDeleteNode } from "@/hooks/api/useNodes";
 import { useProjectOrTemplateContexts } from "@/hooks/api/useContexts";
 import { useNodeTableStore } from "@/store/nodeTableStore";
@@ -173,6 +183,8 @@ export function NodeTableDrawer({
     "nodes"
   );
   const [copiedCommandId, setCopiedCommandId] = useState<string | null>(null);
+  const [deleteNodeDialogOpen, setDeleteNodeDialogOpen] = useState(false);
+  const [nodeToDelete, setNodeToDelete] = useState<string | null>(null);
   const [commandFilter, setCommandFilter] = useState<
     "all" | "has_variables" | "missing_variables" | "no_variables"
   >("all");
@@ -416,23 +428,23 @@ export function NodeTableDrawer({
   );
 
   // Handle node deletion
-  const handleDeleteNode = useCallback(
-    async (nodeId: string) => {
-      if (
-        confirm(
-          "Are you sure you want to delete this node? This action cannot be undone."
-        )
-      ) {
-        try {
-          await deleteNode.mutateAsync({ projectId, nodeId });
-          toast.success("Node deleted successfully");
-        } catch (error) {
-          toast.error("Failed to delete node");
-        }
-      }
-    },
-    [projectId, deleteNode]
-  );
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodeToDelete(nodeId);
+    setDeleteNodeDialogOpen(true);
+  }, []);
+
+  const confirmDeleteNode = useCallback(async () => {
+    if (!nodeToDelete) return;
+    try {
+      await deleteNode.mutateAsync({ projectId, nodeId: nodeToDelete });
+      toast.success("Node deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete node");
+    } finally {
+      setDeleteNodeDialogOpen(false);
+      setNodeToDelete(null);
+    }
+  }, [projectId, nodeToDelete, deleteNode]);
 
   // Handle command copy with variable resolution
   const handleCopyCommand = useCallback(
@@ -1413,6 +1425,35 @@ export function NodeTableDrawer({
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Node Confirmation Dialog */}
+      <AlertDialog
+        open={deleteNodeDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteNodeDialogOpen(open);
+          if (!open) setNodeToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete node?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this
+              node and all its associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteNode}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ContextModal
         isOpen={showContextModal}
         onClose={() => setShowContextModal(false)}
