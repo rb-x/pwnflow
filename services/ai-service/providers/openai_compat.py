@@ -1,5 +1,6 @@
+import json
 import logging
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 import httpx
 
@@ -96,6 +97,62 @@ class OpenAICompatProvider(AIProvider):
             raise ValueError("Empty content in OpenAI-compatible response")
 
         return text
+
+    async def generate_content_stream(
+        self,
+        prompt: str,
+        system_prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
+    ) -> AsyncGenerator[str, None]:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        request_data = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+
+        url = f"{self.base_url}/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        if self.api_key and self.api_key.strip():
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        logger.info(
+            f"Streaming OpenAI-compatible API call to {self.base_url} model: {self.model}"
+        )
+
+        async with self.client.stream(
+            "POST", url, json=request_data, headers=headers
+        ) as response:
+            if response.status_code != 200:
+                body = await response.aread()
+                logger.error(f"OpenAI-compat stream error: {body.decode()}")
+                raise httpx.HTTPStatusError(
+                    f"HTTP {response.status_code}",
+                    request=response.request,
+                    response=response,
+                )
+
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:]
+                if payload.strip() == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(payload)
+                    delta = chunk["choices"][0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield content
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
 
     async def get_provider_name(self) -> str:
         return f"openai-compat ({self.model} @ {self.base_url})"

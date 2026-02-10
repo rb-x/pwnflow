@@ -1,4 +1,7 @@
+import json
+
 from fastapi import FastAPI, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
@@ -44,6 +47,11 @@ class ChatRequest(BaseModel):
     system_prompt: str
     user_message: str
     response_mime_type: Optional[str] = "text/plain"
+
+
+class ChatStreamRequest(BaseModel):
+    system_prompt: str
+    user_message: str
 
 
 @app.get("/health")
@@ -175,6 +183,39 @@ async def chat_sync(request: ChatRequest):
     except Exception as e:
         logger.error(f"Chat failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat-stream")
+async def chat_stream(request: ChatStreamRequest):
+    """SSE streaming chat — yields token events as they arrive from the LLM."""
+
+    async def event_generator():
+        try:
+            provider = get_provider()
+            async with provider as service:
+                async for chunk in service.generate_content_stream(
+                    prompt=f"User: {request.user_message}",
+                    system_prompt=request.system_prompt,
+                    temperature=0.7,
+                    max_tokens=8192,
+                ):
+                    yield f"event: token\ndata: {json.dumps({'t': chunk})}\n\n"
+
+            yield "event: done\ndata: {}\n\n"
+
+        except Exception as e:
+            logger.error(f"Stream chat error: {e}")
+            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 if __name__ == "__main__":

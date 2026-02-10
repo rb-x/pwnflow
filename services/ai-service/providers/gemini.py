@@ -1,5 +1,6 @@
+import json
 import logging
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 import httpx
 
@@ -85,6 +86,59 @@ class GeminiProvider(AIProvider):
             raise ValueError("No text in Gemini response")
 
         return text
+
+    async def generate_content_stream(
+        self,
+        prompt: str,
+        system_prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
+    ) -> AsyncGenerator[str, None]:
+        request_data = {
+            "contents": [
+                {"parts": [{"text": f"{system_prompt}\n\n{prompt}"}]}
+            ],
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+
+        url = f"{self.base_url}/{self.model}:streamGenerateContent?alt=sse"
+        headers = {
+            "Content-Type": "application/json",
+            "X-goog-api-key": self.api_key,
+        }
+
+        logger.info(f"Streaming Gemini API call to model: {self.model}")
+
+        async with self.client.stream(
+            "POST", url, json=request_data, headers=headers
+        ) as response:
+            if response.status_code != 200:
+                body = await response.aread()
+                logger.error(f"Gemini stream error: {body.decode()}")
+                raise httpx.HTTPStatusError(
+                    f"HTTP {response.status_code}",
+                    request=response.request,
+                    response=response,
+                )
+
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:]
+                try:
+                    chunk = json.loads(payload)
+                    candidates = chunk.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        for part in parts:
+                            text = part.get("text", "")
+                            if text:
+                                yield text
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
 
     async def get_provider_name(self) -> str:
         return f"gemini ({self.model})"

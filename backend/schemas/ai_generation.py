@@ -16,5 +16,7 @@ __all__ = [
     "AISuggestConnectionsRequest",
     "ChatMode",
     "AIChatRequest",
+    "ChatMessage",
+    "AIChatStreamRequest",
     "AIChatResponse",
 ]

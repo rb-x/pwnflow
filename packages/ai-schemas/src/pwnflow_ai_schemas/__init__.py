@@ -114,6 +114,18 @@ class AIChatRequest(BaseModel):
     mode: ChatMode = Field(default=ChatMode.GENERAL)
 
 
+class ChatMessage(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1)
+
+
+class AIChatStreamRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    node_id: Optional[str] = Field(default=None)
+    mode: ChatMode = Field(default=ChatMode.GENERAL)
+    history: Optional[List[ChatMessage]] = Field(default=None)
+
+
 class AIChatResponse(BaseModel):
     message: str
     suggestions: Optional[List[Dict[str, Any]]] = None
@@ -134,5 +146,7 @@ __all__ = [
     "AISuggestConnectionsRequest",
     "ChatMode",
     "AIChatRequest",
+    "ChatMessage",
+    "AIChatStreamRequest",
     "AIChatResponse",
 ]

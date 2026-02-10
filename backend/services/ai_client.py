@@ -1,7 +1,8 @@
+import json
 import httpx
 import os
 import asyncio
-from typing import Optional, Dict, Any, List
+from typing import AsyncGenerator, Optional, Dict, Any, List
 import logging
 
 from schemas.ai_generation import AIGenerationResponse, AIGenerationOptions
@@ -171,5 +172,46 @@ class AIServiceClient:
         except Exception as e:
             logger.error(f"AI microservice chat failed: {e}")
             raise
+
+    async def chat_stream(
+        self,
+        system_prompt: str,
+        user_message: str,
+    ) -> AsyncGenerator[str, None]:
+        """Stream SSE events from AI service /chat-stream."""
+        self._ensure_client()
+        async with self.client.stream(
+            "POST",
+            f"{self.base_url}/chat-stream",
+            json={
+                "system_prompt": system_prompt,
+                "user_message": user_message,
+            },
+            timeout=120.0,
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if line:
+                    yield line
+
+    async def chat_suggestions(
+        self,
+        system_prompt: str,
+        user_message: str,
+    ) -> Any:
+        """Non-streamed call for structured node suggestions."""
+        self._ensure_client()
+        response = await self.client.post(
+            f"{self.base_url}/chat-sync",
+            json={
+                "system_prompt": system_prompt,
+                "user_message": user_message,
+                "response_mime_type": "application/json",
+            },
+            timeout=120.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("result")
 
 ai_client = AIServiceClient()

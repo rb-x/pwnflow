@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
-  Send,
   Loader2,
   Sparkles,
   AlertCircle,
   ArrowUp,
   Trash2,
   FileText,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Popover,
@@ -82,7 +81,7 @@ const saveChatToStorage = (projectId: string, messages: Message[]) => {
     const messagesToSave = messages.slice(-50);
     localStorage.setItem(
       getChatStorageKey(projectId),
-      JSON.stringify(messagesToSave)
+      JSON.stringify(messagesToSave),
     );
   } catch (e) {
     console.warn("Failed to save chat to localStorage:", e);
@@ -114,13 +113,15 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
   children,
 }) => {
   const [messages, setMessages] = useState<Message[]>(() =>
-    loadChatFromStorage(projectId)
+    loadChatFromStorage(projectId),
   );
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [chatMode, setChatMode] = useState<"chat" | "generate">("chat");
 
   const token = authService.getToken();
@@ -151,12 +152,12 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
       "Quantifying how our SSRF filter blocks everything except SSRF...",
       "Benchmarking our WAF bypass rate against actual attacks...",
       "Validating that our input sanitization creates new injection vectors...",
-      "Confirming our rate limiting scales linearly with bot sophistication..."
+      "Confirming our rate limiting scales linearly with bot sophistication...",
     ],
-    []
+    [],
   );
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState<number>(() =>
-    Math.floor(Math.random() * loadingPhrases.length)
+    Math.floor(Math.random() * loadingPhrases.length),
   );
 
   const createNodeMutation = useCreateNode();
@@ -186,8 +187,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     ) {
       const hasNodes = nodes && nodes.length > 0;
       const initialMessage = hasNodes
-        ? 'Hey there! I\'m your cybersecurity assistant. I can analyze your mindmap, suggest improvements, and create comprehensive nodes.\n\n⚡ Quick tips:\n• I can create nodes directly - just say "create a node about X"\n• Right-click any node → \'AI Suggest Children\' for contextual suggestions\n• I\'ll generate detailed descriptions, commands, and tags\n\n⚠️ Important: I don\'t have memory between messages. Be specific in each request!\nInstead of "create another one", say "create a node about SQL injection"\n\nWhat security topic should we explore?'
-        : "Hey there! I'm your cybersecurity assistant. Ready to build your security mindmap!\n\n🚀 You can:\n• Ask me to \"create nodes about web security\" (or any topic)\n• Create a node manually with + button, then right-click → 'AI Suggest Children'\n• I'll generate comprehensive nodes with:\n  - Detailed markdown descriptions\n  - Practical commands\n  - Relevant tags\n\n⚠️ Important: I don't have memory between messages. Be specific!\n\nWhat are you planning to assess?";
+        ? "Hey there! I'm your cybersecurity assistant. I can analyze your mindmap, suggest improvements, and create comprehensive nodes.\n\nQuick tips:\n- I can create nodes directly - just say \"create a node about X\"\n- Right-click any node -> 'AI Suggest Children' for contextual suggestions\n- I remember our conversation so feel free to reference earlier messages\n- Shift+Enter for newline, Enter to send\n\nWhat security topic should we explore?"
+        : "Hey there! I'm your cybersecurity assistant. Ready to build your security mindmap!\n\nYou can:\n- Ask me to \"create nodes about web security\" (or any topic)\n- Create a node manually with + button, then right-click -> 'AI Suggest Children'\n- I remember our conversation so feel free to follow up naturally\n- Shift+Enter for newline, Enter to send\n\nWhat are you planning to assess?";
 
       addMessage({
         id: Date.now().toString(),
@@ -204,7 +205,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     setTimeout(() => {
       if (scrollAreaRef.current) {
         const scrollContainer = scrollAreaRef.current.querySelector(
-          "[data-radix-scroll-area-viewport]"
+          "[data-radix-scroll-area-viewport]",
         );
         if (scrollContainer) {
           scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -327,7 +328,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
           if (!parentNodeId && nodes && nodes.length > 0) {
             const parentNode = nodes.find(
               (n) =>
-                n.title.toLowerCase() === suggestion.parent_title?.toLowerCase()
+                n.title.toLowerCase() ===
+                suggestion.parent_title?.toLowerCase(),
             );
             if (parentNode) {
               parentNodeId = parentNode.id;
@@ -345,12 +347,12 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
             } catch (error) {
               console.error(
                 `Failed to link ${suggestion.title} to ${suggestion.parent_title}:`,
-                error
+                error,
               );
             }
           } else {
             console.warn(
-              `Parent node "${suggestion.parent_title}" not found for "${suggestion.title}"`
+              `Parent node "${suggestion.parent_title}" not found for "${suggestion.title}"`,
             );
           }
         }
@@ -374,8 +376,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
       // Clear suggestions from the message
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.suggestions ? { ...msg, suggestions: undefined } : msg
-        )
+          msg.suggestions ? { ...msg, suggestions: undefined } : msg,
+        ),
       );
     } catch (error) {
       console.error("Error creating nodes:", error);
@@ -392,8 +394,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
           msg.type === "user"
             ? "You"
             : msg.type === "assistant"
-            ? "AI"
-            : "System";
+              ? "AI"
+              : "System";
         const time =
           msg.timestamp instanceof Date
             ? msg.timestamp.toLocaleString()
@@ -425,8 +427,8 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     // Add welcome message again
     const hasNodes = nodes && nodes.length > 0;
     const initialMessage = hasNodes
-      ? 'Chat cleared! Remember: I don\'t have memory of previous messages. Be specific with each request!\n\nExample: "Create a node about XSS vulnerabilities" instead of "create another one"\n\nWhat would you like to explore?'
-      : "Chat cleared! Ready to start fresh.\n\n⚠️ Remember: Each message is independent - be specific!\n\nWhat security topic should we map out?";
+      ? "Chat cleared! Ready to start fresh.\n\nWhat would you like to explore?"
+      : "Chat cleared! Ready to start fresh.\n\nWhat security topic should we map out?";
 
     addMessage({
       id: Date.now().toString(),
@@ -434,6 +436,13 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
       content: initialMessage,
       timestamp: new Date(),
     });
+  };
+
+  const handleAbort = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   const handleSend = async () => {
@@ -457,6 +466,9 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
       return;
     }
 
+    // Abort any in-flight stream
+    handleAbort();
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
@@ -468,24 +480,56 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
     const promptText = input;
     setInput("");
     setIsLoading(true);
+    setIsStreaming(true);
     setError(null);
 
-    const apiUrl =
-      env.API_BASE_URL;
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
+
+    // Build history from recent messages (last 10 user/assistant messages)
+    const history = messages
+      .filter((m) => m.type === "user" || m.type === "assistant")
+      .slice(-10)
+      .map((m) => ({
+        role: m.type as "user" | "assistant",
+        content: m.content,
+      }));
+
+    const apiUrl = env.API_BASE_URL;
+    const assistantMsgId = (Date.now() + 1).toString();
+
+    // Add empty assistant message that we'll stream into
+    const assistantMessage: Message = {
+      id: assistantMsgId,
+      type: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, assistantMessage]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
-      const response = await fetch(`${apiUrl}/projects/${projectId}/ai/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${apiUrl}/projects/${projectId}/ai/chat-stream`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            message: promptText,
+            node_id: selectedNodeId,
+            mode: selectedNodeId ? "node_context" : "general",
+            history,
+          }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({
-          message: promptText,
-          node_id: selectedNodeId,
-          mode: selectedNodeId ? "node_context" : "general",
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -493,35 +537,117 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.detail || errorMessage;
-        } catch (e) {
+        } catch {
           // If not JSON, use the status message
         }
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamedText = "";
+      let suggestions: NodeSuggestion[] | undefined;
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || "";
+
+        let currentEvent = "";
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            const dataStr = line.slice(6);
+            try {
+              const data = JSON.parse(dataStr);
+
+              if (currentEvent === "token" && data.t) {
+                streamedText += data.t;
+                // Update the assistant message in-place
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? { ...msg, content: streamedText }
+                      : msg,
+                  ),
+                );
+                // Scroll to bottom
+                setTimeout(() => {
+                  if (scrollAreaRef.current) {
+                    const viewport = scrollAreaRef.current.querySelector(
+                      "[data-radix-scroll-area-viewport]",
+                    );
+                    if (viewport) {
+                      viewport.scrollTop = viewport.scrollHeight;
+                    }
+                  }
+                }, 10);
+              } else if (currentEvent === "suggestions" && data.nodes) {
+                suggestions = data.nodes;
+              } else if (currentEvent === "error" && data.message) {
+                throw new Error(data.message);
+              }
+              // "done" event — handled after loop
+            } catch (e) {
+              // Re-throw real errors, ignore JSON parse failures from partial chunks
+              if (e instanceof Error && !e.message.includes("JSON")) {
+                throw e;
+              }
+            }
+            currentEvent = "";
+          }
+        }
+      }
+
+      // Finalize the assistant message with suggestions if any
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? {
+                ...msg,
+                content: streamedText || "No response received.",
+                suggestions,
+              }
+            : msg,
+        ),
+      );
 
       setIsLoading(false);
-
-      // Check if response has suggestions
-      const suggestions = data.suggestions;
-
-      addMessage({
-        id: Date.now().toString(),
-        type: "assistant",
-        content: data.message,
-        timestamp: new Date(),
-        suggestions: suggestions,
-      });
+      setIsStreaming(false);
+      abortControllerRef.current = null;
     } catch (error: any) {
-      setError(error.message || "Failed to chat");
+      if (error.name === "AbortError") {
+        // User cancelled — keep whatever we streamed so far
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId && !msg.content
+              ? { ...msg, content: "(cancelled)" }
+              : msg,
+          ),
+        );
+      } else {
+        setError(error.message || "Failed to chat");
+        // Remove the empty assistant message and add error
+        setMessages((prev) => [
+          ...prev.filter((msg) => msg.id !== assistantMsgId),
+          {
+            id: Date.now().toString(),
+            type: "system" as const,
+            content: `Error: ${error.message || "Failed to chat"}`,
+            timestamp: new Date(),
+          },
+        ]);
+      }
       setIsLoading(false);
-      addMessage({
-        id: Date.now().toString(),
-        type: "system",
-        content: `Error: ${error.message || "Failed to chat"}`,
-        timestamp: new Date(),
-      });
+      setIsStreaming(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -543,7 +669,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                 key={message.id}
                 className={cn(
                   "flex",
-                  message.type === "user" ? "justify-end" : "justify-start"
+                  message.type === "user" ? "justify-end" : "justify-start",
                 )}
               >
                 <div
@@ -554,14 +680,16 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                     message.type === "assistant" &&
                       "bg-muted border border-border shadow-sm text-foreground",
                     message.type === "system" &&
-                      "bg-muted text-muted-foreground text-xs border shadow-sm border-border"
+                      "bg-muted text-muted-foreground text-xs border shadow-sm border-border",
                   )}
                   style={{
                     wordBreak: "break-word",
                     overflowWrap: "break-word",
                   }}
                 >
-                  {message.type === "assistant" ? (
+                  {message.type === "assistant" && !message.content ? (
+                    <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse rounded-sm" />
+                  ) : message.type === "assistant" ? (
                     <div className="prose prose-sm max-w-none [&>*]:break-words prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-li:text-foreground">
                       <ReactMarkdown
                         components={{
@@ -703,16 +831,18 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
               </div>
             ))}
 
-            {isLoading && (
-              <div className="flex justify-start px-4">
-                <div className="relative overflow-hidden rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border text-foreground shadow-md w-fit">
-                  <Loader2 className="absolute right-2 top-2 h-3 w-3 animate-spin text-muted-foreground" />
-                  <span className="block pr-6 text-xs font-medium text-muted-foreground">
-                    {loadingPhrases[loadingPhraseIndex]}
-                  </span>
+            {isLoading &&
+              messages[messages.length - 1]?.type === "assistant" &&
+              !messages[messages.length - 1]?.content && (
+                <div className="flex justify-start px-4">
+                  <div className="relative overflow-hidden rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border text-foreground shadow-md w-fit">
+                    <Loader2 className="absolute right-2 top-2 h-3 w-3 animate-spin text-muted-foreground" />
+                    <span className="block pr-6 text-xs font-medium text-muted-foreground">
+                      {loadingPhrases[loadingPhraseIndex]}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {error && (
               <Alert variant="destructive" className="text-xs">
@@ -729,10 +859,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setInput("/clear");
-                handleSend();
-              }}
+              onClick={() => clearChat()}
               disabled={isLoading}
               className="h-7 px-2 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
             >
@@ -742,10 +869,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setInput("/export");
-                handleSend();
-              }}
+              onClick={() => exportChat()}
               disabled={isLoading}
               className="h-7 px-3 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
             >
@@ -755,45 +879,56 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
             <div className="flex-1" />
           </div>
 
-          <form
-            onSubmit={(e: React.FormEvent) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="relative pb-3"
-          >
+          <div className="relative pb-3">
             <div className="relative">
-              <Input
+              <textarea
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Auto-grow textarea
+                  e.target.style.height = "auto";
+                  e.target.style.height =
+                    Math.min(e.target.scrollHeight, 120) + "px";
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder={
-                  isLoading ? "Generating response..." : "Ask anything..."
+                  isLoading
+                    ? "Generating response..."
+                    : "Ask anything... (Shift+Enter for newline)"
                 }
                 disabled={isLoading}
+                rows={1}
                 className={cn(
-                  "w-full h-12 pr-12 text-sm rounded-full shadow-xl bg-background/80 backdrop-blur-sm focus:bg-background transition-all duration-300 border",
-                  isLoading && "animate-pulse bg-background/40"
+                  "w-full min-h-[48px] max-h-[120px] pr-12 pl-4 py-3 text-sm rounded-2xl shadow-xl bg-background/80 backdrop-blur-sm focus:bg-background transition-all duration-300 border resize-none focus:outline-none focus:ring-2 focus:ring-ring",
+                  isLoading && "animate-pulse bg-background/40",
                 )}
               />
-              {isLoading && (
-                <div className="absolute left-42 top-1/2 -translate-y-1/2">
-                  <div className="w-1 h-5 bg-primary animate-pulse rounded-full" />
-                </div>
-              )}
-              <Button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-5 p-0 rounded-full bg-primary text-primary-foreground hover:bg-primary"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
+              {isStreaming ? (
+                <Button
+                  type="button"
+                  onClick={handleAbort}
+                  className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  <Square className="h-2.5 w-2.5" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={!input.trim() || isLoading}
+                  className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-primary text-primary-foreground hover:bg-primary"
+                >
                   <ArrowUp className="h-2 w-2" />
-                )}
-              </Button>
+                </Button>
+              )}
             </div>
-          </form>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
