@@ -30,9 +30,7 @@ __pycache__/
 
 # Environment files - NEVER COMMIT!
 .env
-.env.local
-.env.development
-.env.production
+.env.*
 backend/.env
 backend/.env.production
 frontend/.env
