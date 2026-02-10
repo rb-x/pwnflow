@@ -8,6 +8,8 @@ import {
   Trash2,
   FileText,
   Square,
+  X,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -610,12 +612,58 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
               className="absolute inset-0 bg-black/40"
               onClick={() => onOpenChange(false)}
             />
-            <div className="relative w-[700px] h-[80vh] max-h-[800px] p-0 flex flex-col bg-background/95 backdrop-blur-sm shadow-2xl rounded-xl border border-border">
+            <div className="relative w-[720px] h-[80vh] max-h-[820px] flex flex-col bg-background/98 backdrop-blur-xl shadow-2xl rounded-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 bg-muted/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-primary/10">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold leading-none">
+                      AI Assistant
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {isStreaming ? "Responding..." : "Ready"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => exportChat()}
+                    disabled={isLoading}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <FileText className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => clearChat()}
+                    disabled={isLoading}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onOpenChange(false)}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Messages */}
               <ScrollArea
                 ref={scrollAreaRef}
                 className="flex-1 overflow-y-auto overflow-x-hidden"
               >
-                <div className="space-y-3 px-4 py-3 max-w-full">
+                <div className="space-y-4 px-5 py-4 max-w-full">
                   {messages.map((message) => (
                     <div
                       key={message.id}
@@ -628,13 +676,13 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                     >
                       <div
                         className={cn(
-                          "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
                           message.type === "user" &&
-                            "bg-primary text-primary-foreground",
+                            "bg-primary text-primary-foreground rounded-br-md",
                           message.type === "assistant" &&
-                            "bg-muted border border-border shadow-sm text-foreground",
+                            "bg-muted/60 border border-border/50 text-foreground rounded-bl-md",
                           message.type === "system" &&
-                            "bg-muted text-muted-foreground text-xs border shadow-sm border-border",
+                            "bg-muted/40 text-muted-foreground text-xs border border-border/30 max-w-[90%]",
                         )}
                         style={{
                           wordBreak: "break-word",
@@ -799,12 +847,13 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                   {isLoading &&
                     messages[messages.length - 1]?.type === "assistant" &&
                     !messages[messages.length - 1]?.content && (
-                      <div className="flex justify-start px-4">
-                        <div className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border shadow-md w-fit">
-                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">
-                            Thinking...
-                          </span>
+                      <div className="flex justify-start">
+                        <div className="flex items-center gap-2 rounded-2xl rounded-bl-md px-4 py-3 text-sm bg-muted/60 border border-border/50 w-fit">
+                          <div className="flex gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+                          </div>
                         </div>
                       </div>
                     )}
@@ -820,81 +869,55 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                 </div>
               </ScrollArea>
 
-              <div className="p-4">
-                {/* Quick Actions */}
-                <div className="flex items-center gap-2 mb-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => clearChat()}
-                    disabled={isLoading}
-                    className="h-7 px-2 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    /clear
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => exportChat()}
-                    disabled={isLoading}
-                    className="h-7 px-3 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
-                  >
-                    <FileText className="h-3 w-3 mr-1" />
-                    /export
-                  </Button>
-                  <div className="flex-1" />
-                </div>
-
-                <div className="relative pb-3">
-                  <div className="relative">
-                    <textarea
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => {
-                        setInput(e.target.value);
-                        // Auto-grow textarea
-                        e.target.style.height = "auto";
-                        e.target.style.height =
-                          Math.min(e.target.scrollHeight, 120) + "px";
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      placeholder={
-                        isLoading
-                          ? "Generating response..."
-                          : "Ask anything... (Shift+Enter for newline)"
+              {/* Input */}
+              <div className="px-5 py-4 border-t border-border/50 bg-muted/20">
+                <div className="relative">
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      // Auto-grow textarea
+                      e.target.style.height = "auto";
+                      e.target.style.height =
+                        Math.min(e.target.scrollHeight, 120) + "px";
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
                       }
-                      disabled={isLoading}
-                      rows={1}
-                      className={cn(
-                        "w-full min-h-[48px] max-h-[120px] pr-12 pl-4 py-3 text-sm rounded-2xl shadow-xl bg-background/80 backdrop-blur-sm focus:bg-background transition-all duration-300 border resize-none focus:outline-none focus:ring-2 focus:ring-ring",
-                        isLoading && "animate-pulse bg-background/40",
-                      )}
-                    />
-                    {isStreaming ? (
-                      <Button
-                        type="button"
-                        onClick={handleAbort}
-                        className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        <Square className="h-2.5 w-2.5" />
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={handleSend}
-                        disabled={!input.trim() || isLoading}
-                        className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-primary text-primary-foreground hover:bg-primary"
-                      >
-                        <ArrowUp className="h-2 w-2" />
-                      </Button>
+                    }}
+                    placeholder={
+                      isLoading
+                        ? "Generating response..."
+                        : "Ask anything... (Shift+Enter for newline)"
+                    }
+                    disabled={isLoading}
+                    rows={1}
+                    className={cn(
+                      "w-full min-h-[48px] max-h-[120px] pr-12 pl-4 py-3 text-sm rounded-xl bg-background border border-border/80 resize-none focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors",
+                      isLoading && "opacity-50",
                     )}
-                  </div>
+                  />
+                  {isStreaming ? (
+                    <Button
+                      type="button"
+                      onClick={handleAbort}
+                      className="absolute right-2.5 bottom-2.5 h-7 w-7 p-0 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      <Square className="h-3 w-3" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={handleSend}
+                      disabled={!input.trim() || isLoading}
+                      className="absolute right-2.5 bottom-2.5 h-7 w-7 p-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
