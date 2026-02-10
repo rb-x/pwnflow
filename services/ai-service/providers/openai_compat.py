@@ -65,6 +65,14 @@ class OpenAICompatProvider(AIProvider):
             response = await self.client.post(
                 url, json=request_data, headers=headers
             )
+            # If server rejects response_format, retry without it
+            if response.status_code == 400 and response_json:
+                logger.info("Server rejected response_format, retrying without it")
+                request_data.pop("response_format", None)
+                response = await self.client.post(
+                    url, json=request_data, headers=headers
+                )
+
             logger.info(f"OpenAI-compat API response status: {response.status_code}")
             if response.status_code != 200:
                 logger.error(f"OpenAI-compat API error response: {response.text}")
