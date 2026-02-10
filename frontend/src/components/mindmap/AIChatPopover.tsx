@@ -870,14 +870,13 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
               </ScrollArea>
 
               {/* Input */}
-              <div className="px-5 py-4 border-t border-border/50 bg-muted/20">
-                <div className="relative">
+              <div className="px-5 py-3 border-t border-border/50 bg-muted/20">
+                <div className="flex items-end gap-2">
                   <textarea
                     ref={inputRef}
                     value={input}
                     onChange={(e) => {
                       setInput(e.target.value);
-                      // Auto-grow textarea
                       e.target.style.height = "auto";
                       e.target.style.height =
                         Math.min(e.target.scrollHeight, 120) + "px";
@@ -896,7 +895,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                     disabled={isLoading}
                     rows={1}
                     className={cn(
-                      "w-full min-h-[48px] max-h-[120px] pr-12 pl-4 py-3 text-sm rounded-xl bg-background border border-border/80 resize-none focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors",
+                      "flex-1 min-h-[44px] max-h-[120px] px-4 py-2.5 text-sm rounded-xl bg-background border border-border/80 resize-none focus:outline-none focus:ring-2 focus:ring-ring/50 transition-colors",
                       isLoading && "opacity-50",
                     )}
                   />
@@ -904,16 +903,16 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                     <Button
                       type="button"
                       onClick={handleAbort}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="shrink-0 h-[44px] w-[44px] rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      <Square className="h-3 w-3" />
+                      <Square className="h-4 w-4" />
                     </Button>
                   ) : (
                     <Button
                       type="button"
                       onClick={handleSend}
                       disabled={!input.trim() || isLoading}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="shrink-0 h-[44px] w-[44px] rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       <ArrowUp className="h-4 w-4" />
                     </Button>
