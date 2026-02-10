@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Loader2,
   Sparkles,
@@ -127,38 +127,6 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
   const token = authService.getToken();
   const selectedNodeId = useMindMapStore((state) => state.selectedNodeId);
   const [isCreating, setIsCreating] = useState(false);
-  const loadingPhrases = useMemo(
-    () => [
-      "Waiting for someone to notice our SAML assertion is just wishful thinking...",
-      "Watching the CSP header argue with itself about 'unsafe-inline'...",
-      "Observing how our JWT expires before the user finishes logging in...",
-      "Calculating entropy in passwords that are just keyboard walks...",
-      "Measuring TTFB on our reverse shell callback...",
-      "Timing race conditions in our OAuth implementation...",
-      "Counting LDAP injection vectors in our directory traversal...",
-      "Monitoring certificate transparency logs for our internal CAs...",
-      "Tracking OSINT leakage from our S3 bucket naming convention...",
-      "Documenting XXE payloads that parse better than our XML...",
-      "Cataloging which endpoints still validate CSRF tokens...",
-      "Indexing prototype pollution chains in our dependency tree...",
-      "Archiving the commit that introduced our deserialization vulnerability...",
-      "Reconciling why our HSTS header has a max-age of zero...",
-      "Auditing which APIs return stack traces in production responses...",
-      "Inventorying hardcoded private keys in our container registry...",
-      "Cross-referencing our CORS policy with actual browser behavior...",
-      "Mapping DOM clobbering vectors in our SPA routing...",
-      "Correlating timing attacks with our bcrypt work factor...",
-      "Analyzing why our CSP nonce is predictable...",
-      "Quantifying how our SSRF filter blocks everything except SSRF...",
-      "Benchmarking our WAF bypass rate against actual attacks...",
-      "Validating that our input sanitization creates new injection vectors...",
-      "Confirming our rate limiting scales linearly with bot sophistication...",
-    ],
-    [],
-  );
-  const [loadingPhraseIndex, setLoadingPhraseIndex] = useState<number>(() =>
-    Math.floor(Math.random() * loadingPhrases.length),
-  );
 
   const createNodeMutation = useCreateNode();
   const linkNodesMutation = useLinkNodes();
@@ -213,29 +181,6 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
       }
     }, 100);
   };
-
-  useEffect(() => {
-    if (!isLoading) return;
-
-    const pickNextPhrase = () => {
-      setLoadingPhraseIndex((prev) => {
-        if (loadingPhrases.length <= 1) return prev;
-        let next = Math.floor(Math.random() * loadingPhrases.length);
-        while (next === prev) {
-          next = Math.floor(Math.random() * loadingPhrases.length);
-        }
-        return next;
-      });
-    };
-
-    pickNextPhrase();
-    const interval = window.setInterval(pickNextPhrase, 2200);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [isLoading, loadingPhrases]);
-
   const createNodesFromSuggestions = async (suggestions: NodeSuggestion[]) => {
     if (!suggestions || suggestions.length === 0) return;
 
@@ -835,10 +780,10 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
               messages[messages.length - 1]?.type === "assistant" &&
               !messages[messages.length - 1]?.content && (
                 <div className="flex justify-start px-4">
-                  <div className="relative overflow-hidden rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border text-foreground shadow-md w-fit">
-                    <Loader2 className="absolute right-2 top-2 h-3 w-3 animate-spin text-muted-foreground" />
-                    <span className="block pr-6 text-xs font-medium text-muted-foreground">
-                      {loadingPhrases[loadingPhraseIndex]}
+                  <div className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border shadow-md w-fit">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      Thinking...
                     </span>
                   </div>
                 </div>
