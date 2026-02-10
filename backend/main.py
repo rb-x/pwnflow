@@ -34,22 +34,22 @@ async def lifespan(app: FastAPI):
         logger.info(f"GOOGLE_API_KEY first 10 chars: {settings.GOOGLE_API_KEY[:10]}...")
     logger.info(f"GEMINI_MODEL: {settings.GEMINI_MODEL}")
     logger.info(f"TMUX_RUNNER_SECRET set: {'Yes (' + settings.TMUX_RUNNER_SECRET[:5] + '...)' if settings.TMUX_RUNNER_SECRET else 'No (command execution disabled)'}")
-    
+
     app.state.neo4j_driver = get_driver()
-    
+
     # Create admin user if no users exist
     try:
         async with app.state.neo4j_driver.session() as session:
             existing_users = await session.run("MATCH (u:User) RETURN COUNT(u) as count")
             user_count = (await existing_users.single())["count"]
-            
+
             if user_count == 0:
                 logger.warning("No users found in database!")
                 logger.warning("Use CLI to create user: python create_user.py create admin admin@pwnflow.local")
                 logger.warning("Registration is disabled by default for security")
     except Exception as e:
         logger.error(f"Failed to create admin user: {e}")
-    
+
     # Ensure database schema exists (eliminates Neo4j warnings)
     # Disabled by default - uncomment if you get Neo4j label warnings
     # try:
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
     #     logger.info("Database schema verified")
     # except Exception as e:
     #     logger.debug(f"Schema verification skipped: {e}")
-    
+
     yield
     # Shutdown
     try:
@@ -88,7 +88,7 @@ def create_app() -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
-    
+
     # Add custom exception handler for validation errors
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
@@ -101,10 +101,29 @@ def create_app() -> FastAPI:
     app.include_router(legacy_import.router, prefix=f"{settings.API_V1_STR}", tags=["legacy-import"])
     app.include_router(exports.router, prefix=f"{settings.API_V1_STR}/exports")
     app.include_router(webhooks.router, prefix=f"{settings.API_V1_STR}")
-    
+
     # WebSocket router (not under API version prefix)
     app.include_router(websocket.router, tags=["websocket"])
-    
+
+    @app.get(f"{settings.API_V1_STR}/ai/status", tags=["ai"])
+    async def ai_status():
+        """Proxy AI service health/config for frontend settings display."""
+        try:
+            ai_client._ensure_client()
+            response = await ai_client.client.get(
+                f"{ai_client.base_url}/health", timeout=5.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception:
+            return {
+                "status": "unavailable",
+                "ai_configured": False,
+                "ai_provider": None,
+                "ai_model": None,
+                "ai_base_url": None,
+            }
+
     @app.get(f"{settings.API_V1_STR}/health", tags=["health"])
     async def health_check():
         """Health check endpoint to verify the service is running"""
@@ -113,7 +132,7 @@ def create_app() -> FastAPI:
             "service": "pwnflow-backend",
             "checks": {}
         }
-        
+
         try:
             driver = app.state.neo4j_driver
             with driver.session() as session:
@@ -123,9 +142,9 @@ def create_app() -> FastAPI:
         except Exception as e:
             health_status["status"] = "unhealthy"
             health_status["checks"]["neo4j"] = f"unhealthy: {str(e)}"
-        
+
         return health_status
-    
+
     return app
 
-app = create_app() 
+app = create_app()

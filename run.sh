@@ -116,6 +116,15 @@ ENABLE_REGISTRATION=false
 # AI Settings (optional - add your key if using AI features)
 GOOGLE_API_KEY=
 GEMINI_MODEL=gemini-2.0-flash
+
+# Multi-Provider AI Settings (override above for non-Gemini providers)
+# AI_PROVIDER=gemini              # gemini or openai (auto-detected from AI_BASE_URL)
+# AI_API_KEY=                     # overrides GOOGLE_API_KEY
+# AI_MODEL=                       # overrides GEMINI_MODEL
+# AI_BASE_URL=                    # OpenAI-compatible endpoint (e.g. http://localhost:11434/v1 for Ollama)
+
+# TMUX Runner Secret - base64 key (generate via: python pwnflow-exec/keygen.py)
+# TMUX_RUNNER_SECRET=
 EOF
             print_info "Created .env.development with secure values"
             echo ""
@@ -191,6 +200,15 @@ ENABLE_REGISTRATION=false
 # AI Settings (optional - add your key if using AI features)
 GOOGLE_API_KEY=
 GEMINI_MODEL=gemini-2.0-flash
+
+# Multi-Provider AI Settings (override above for non-Gemini providers)
+# AI_PROVIDER=gemini              # gemini or openai (auto-detected from AI_BASE_URL)
+# AI_API_KEY=                     # overrides GOOGLE_API_KEY
+# AI_MODEL=                       # overrides GEMINI_MODEL
+# AI_BASE_URL=                    # OpenAI-compatible endpoint (e.g. http://localhost:11434/v1 for Ollama)
+
+# TMUX Runner Secret - base64 key (generate via: python pwnflow-exec/keygen.py)
+# TMUX_RUNNER_SECRET=
 EOF
             print_info "Created .env.production with secure values"
             echo ""

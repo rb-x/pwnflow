@@ -1,0 +1,340 @@
+import json
+import re
+import time
+import uuid
+import logging
+from abc import ABC, abstractmethod
+from typing import List, Dict, Optional, Any
+
+from schemas import (
+    AINode,
+    AIRelationship,
+    AIGenerationOptions,
+    AIGenerationResponse,
+    AIGenerationMetadata,
+    RelationshipType,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class AIProvider(ABC):
+    """Abstract base class for LLM providers.
+
+    Subclasses implement generate_content() only — all prompt building,
+    JSON parsing, and response mapping lives here.
+    """
+
+    def __init__(self, api_key: str, model: str, base_url: Optional[str] = None):
+        self.api_key = api_key
+        self.model = model
+        self.base_url = base_url
+
+    @abstractmethod
+    async def __aenter__(self):
+        ...
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        ...
+
+    @abstractmethod
+    async def generate_content(
+        self,
+        prompt: str,
+        system_prompt: str,
+        response_json: bool = False,
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
+    ) -> str:
+        """Send a prompt to the LLM and return the raw text response."""
+        ...
+
+    @abstractmethod
+    async def get_provider_name(self) -> str:
+        """Return a human-readable provider name for health/status."""
+        ...
+
+    # ------------------------------------------------------------------
+    # Shared orchestration — identical across providers
+    # ------------------------------------------------------------------
+
+    async def generate_nodes_with_relationships(
+        self,
+        prompt: str,
+        parent_node: Optional[Dict],
+        existing_nodes: List[Dict],
+        options: AIGenerationOptions,
+    ) -> AIGenerationResponse:
+        start_time = time.time()
+        generation_id = str(uuid.uuid4())
+
+        system_prompt = self._build_system_prompt(parent_node, existing_nodes, options)
+
+        logger.info(f"Generating with provider: {await self.get_provider_name()}")
+        logger.info(f"Request prompt length: {len(prompt)} chars")
+
+        generated_text = await self.generate_content(
+            prompt=f"User request: {prompt}",
+            system_prompt=system_prompt,
+            response_json=True,
+            temperature=0.7,
+            max_tokens=8192,
+        )
+
+        parsed_response = self._parse_json_response(generated_text)
+
+        ai_nodes = [AINode(**node) for node in parsed_response["nodes"]]
+        ai_relationships = [
+            AIRelationship(**rel) for rel in parsed_response["relationships"]
+        ]
+
+        if options.auto_connect:
+            enhanced_relationships = await self._enhance_relationships(
+                ai_nodes, existing_nodes, ai_relationships
+            )
+        else:
+            enhanced_relationships = ai_relationships
+
+        tokens_used = (
+            len(system_prompt.split())
+            + len(prompt.split())
+            + len(generated_text.split())
+        )
+
+        metadata = AIGenerationMetadata(
+            tokens_used=tokens_used,
+            generation_time=time.time() - start_time,
+            ai_model=self.model,
+            parent_context_used=parent_node is not None,
+            existing_nodes_analyzed=len(existing_nodes),
+            generation_id=generation_id,
+        )
+
+        return AIGenerationResponse(
+            nodes=ai_nodes,
+            relationships=enhanced_relationships,
+            metadata=metadata,
+        )
+
+    async def chat(
+        self,
+        system_prompt: str,
+        user_message: str,
+        response_mime_type: str = "text/plain",
+    ) -> Any:
+        """General chat helper."""
+        response_json = response_mime_type == "application/json"
+
+        try:
+            text = await self.generate_content(
+                prompt=f"User: {user_message}",
+                system_prompt=system_prompt,
+                response_json=response_json,
+                temperature=0.7,
+                max_tokens=8192,
+            )
+
+            if response_json:
+                if not text:
+                    return {"reply": "", "directives": None}
+                try:
+                    return self._parse_json_response(text)
+                except ValueError:
+                    return {"reply": text, "directives": None}
+
+            # Try to detect JSON even in plain-text mode
+            try:
+                result = json.loads(text, strict=False)
+                if isinstance(result, dict):
+                    result.setdefault("mode", "general")
+                    return result
+            except json.JSONDecodeError:
+                pass
+
+            return text or "No response generated"
+
+        except Exception as e:
+            logger.error(f"Error in chat: {e}")
+            raise
+
+    # ------------------------------------------------------------------
+    # Prompt construction — provider-agnostic
+    # ------------------------------------------------------------------
+
+    def _build_system_prompt(
+        self,
+        parent_node: Optional[Dict],
+        existing_nodes: List[Dict],
+        options: AIGenerationOptions,
+    ) -> str:
+        parent_context = ""
+        if parent_node:
+            parent_context = f"""Parent Node Context:
+- ID: {parent_node.get('id')}
+- Title: {parent_node.get('title')}
+- Description: {parent_node.get('description')}"""
+
+        existing_context = ""
+        if existing_nodes:
+            node_summaries = []
+            for node in existing_nodes[:10]:
+                node_summaries.append(
+                    f"- {node.get('title')}: {node.get('description', '')[:100]}"
+                )
+            existing_context = f"""Existing Graph Context:
+{chr(10).join(node_summaries)}"""
+
+        command_instruction = ""
+        if options.include_commands:
+            command_instruction = f"""4. Include practical, executable commands for each node where relevant
+5. Commands should be in {options.command_style} style"""
+
+        return f"""You are an AI assistant specialized in cybersecurity mind mapping.
+Generate a structured mind map based on the user's request.
+
+{parent_context}
+
+{existing_context}
+
+Instructions:
+1. Create nodes with meaningful titles and detailed descriptions
+2. Focus on creating intelligent relationships between nodes
+3. Each node should have a clear purpose in the security context
+{command_instruction}
+6. Identify and create cross-references to existing nodes when relevant
+7. MOST IMPORTANT: Create meaningful relationships that show dependencies, workflows, and connections
+
+Constraints:
+- Maximum depth: {options.max_depth}
+- Maximum nodes: {min(options.max_nodes, 10)}
+- Node types to use: {', '.join([t.value for t in options.node_types])}
+- Relationship types to use: {', '.join([r.value for r in options.relationship_types])}
+
+Return a JSON object with this exact structure:
+{{
+  "nodes": [
+    {{
+      "title": "Node Title",
+      "description": "Detailed description of purpose and context",
+      "commands": ["command1", "command2"],
+      "node_type": "tool|technique|concept|vulnerability",
+      "parent_id": "{parent_node.get('id') if parent_node else None}"
+    }}
+  ],
+  "relationships": [
+    {{
+      "source_id": "0",
+      "target_id": "1",
+      "relationship_type": "depends_on|relates_to|requires|leads_to",
+      "confidence": 0.95,
+      "reason": "Explanation of why these nodes are connected"
+    }}
+  ]
+}}
+
+CRITICAL: Relationships are the most important aspect. Analyze content deeply to find meaningful connections."""
+
+    # ------------------------------------------------------------------
+    # Relationship enhancement — provider-agnostic
+    # ------------------------------------------------------------------
+
+    async def _enhance_relationships(
+        self,
+        new_nodes: List[AINode],
+        existing_nodes: List[Dict],
+        initial_relationships: List[AIRelationship],
+    ) -> List[AIRelationship]:
+        enhanced = initial_relationships.copy()
+
+        for i, new_node in enumerate(new_nodes):
+            for existing_node in existing_nodes:
+                similarity = self._calculate_similarity(
+                    new_node.description, existing_node.get("description", "")
+                )
+
+                if similarity > 0.7:
+                    enhanced.append(
+                        AIRelationship(
+                            source_id=str(i),
+                            target_id=existing_node["id"],
+                            relationship_type=RelationshipType.RELATES_TO,
+                            confidence=similarity,
+                            reason="Similar concepts or tools identified",
+                        )
+                    )
+
+        return enhanced
+
+    def _calculate_similarity(self, text1: str, text2: str) -> float:
+        if not text1 or not text2:
+            return 0.0
+
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+
+        if not words1 or not words2:
+            return 0.0
+
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+
+        return len(intersection) / len(union) if union else 0.0
+
+    # ------------------------------------------------------------------
+    # Robust JSON parsing — critical for local models
+    # ------------------------------------------------------------------
+
+    def _parse_json_response(self, text: str) -> dict:
+        """Multi-strategy JSON parsing with fallbacks."""
+        if not text or not text.strip():
+            raise ValueError("Empty response from LLM")
+
+        text = text.strip()
+
+        # Strategy 1: Direct parse
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy 2: Strip markdown code fences
+        fenced = re.search(
+            r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL
+        )
+        if fenced:
+            try:
+                return json.loads(fenced.group(1).strip())
+            except json.JSONDecodeError:
+                pass
+
+        # Strategy 3: Extract first JSON object or array
+        for pattern in [r"(\{[\s\S]*\})", r"(\[[\s\S]*\])"]:
+            match = re.search(pattern, text)
+            if match:
+                try:
+                    return json.loads(match.group(1))
+                except json.JSONDecodeError:
+                    pass
+
+        # Strategy 4: Sanitize common issues and retry
+        sanitized = text.replace("\r\n", "\n").replace("\r", "\n")
+        sanitized = re.sub(r",\s*([}\]])", r"\1", sanitized)
+        try:
+            return json.loads(sanitized, strict=False)
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy 5: Combine fence extraction + sanitization
+        if fenced:
+            inner = fenced.group(1).strip()
+            inner = re.sub(r",\s*([}\]])", r"\1", inner)
+            try:
+                return json.loads(inner, strict=False)
+            except json.JSONDecodeError:
+                pass
+
+        raise ValueError(
+            f"Failed to parse JSON from LLM response. "
+            f"First 500 chars: {text[:500]}"
+        )

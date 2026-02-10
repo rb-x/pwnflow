@@ -10,7 +10,7 @@ load_dotenv()
 app = FastAPI(
     title="AI Service",
     version=os.getenv("SERVICE_VERSION", "dev"),
-    description="AI generation microservice for pwnflow"
+    description="AI generation microservice for pwnflow",
 )
 
 from celery_app import celery_app
@@ -18,11 +18,13 @@ from tasks import (
     generate_nodes_with_relationships_task,
     expand_single_node_task,
     suggest_connections_task,
-    chat_with_context_task
+    chat_with_context_task,
 )
+from providers import get_provider, get_provider_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 # Request/Response models
 class GenerateNodesRequest(BaseModel):
@@ -30,6 +32,7 @@ class GenerateNodesRequest(BaseModel):
     parent_node: Optional[Dict] = None
     existing_nodes: List[Dict] = []
     options: Optional[Dict] = None
+
 
 class TaskResponse(BaseModel):
     task_id: str
@@ -42,14 +45,28 @@ class ChatRequest(BaseModel):
     user_message: str
     response_mime_type: Optional[str] = "text/plain"
 
+
 @app.get("/health")
 async def health_check():
+    config = get_provider_config()
     return {
         "status": "healthy",
         "service": "ai-service",
         "version": os.getenv("SERVICE_VERSION", "dev"),
-        "gemini_configured": bool(os.getenv("GOOGLE_API_KEY"))
+        "ai_configured": config["configured"],
+        "ai_provider": config["provider"],
+        "ai_model": config["model"],
+        "ai_base_url": config["base_url"],
+        # Backward compat
+        "gemini_configured": config["provider"] == "gemini" and config["configured"],
     }
+
+
+@app.get("/config")
+async def get_ai_config():
+    """Return current AI provider configuration (no secrets)."""
+    return get_provider_config()
+
 
 # Async endpoints (using Celery)
 @app.post(
@@ -63,11 +80,11 @@ async def generate_nodes(request: GenerateNodesRequest, response: Response):
         prompt=request.prompt,
         parent_node=request.parent_node,
         existing_nodes=request.existing_nodes,
-        options=request.options
+        options=request.options,
     )
-
     response.headers["Location"] = f"/tasks/{task.id}"
     return TaskResponse(task_id=task.id)
+
 
 @app.post(
     "/expand-node",
@@ -80,6 +97,7 @@ async def expand_node(request: Dict, response: Response):
     response.headers["Location"] = f"/tasks/{task.id}"
     return TaskResponse(task_id=task.id)
 
+
 @app.post(
     "/suggest-connections",
     response_model=TaskResponse,
@@ -90,6 +108,7 @@ async def suggest_connections(request: Dict, response: Response):
     task = suggest_connections_task.delay(**request)
     response.headers["Location"] = f"/tasks/{task.id}"
     return TaskResponse(task_id=task.id)
+
 
 @app.post(
     "/chat",
@@ -106,21 +125,21 @@ async def chat(request: ChatRequest, response: Response):
     response.headers["Location"] = f"/tasks/{task.id}"
     return TaskResponse(task_id=task.id)
 
+
 # Synchronous endpoints (for backwards compatibility)
 @app.post("/generate-nodes-sync")
 async def generate_nodes_sync(request: GenerateNodesRequest):
     """Synchronous generation - blocks until complete"""
     task = generate_nodes_with_relationships_task.apply_async(
-        kwargs=request.dict(),
-        time_limit=60
+        kwargs=request.dict(), time_limit=60
     )
-
     try:
         result = task.get(timeout=60)
         return {"status": "success", "data": result}
     except Exception as e:
         logger.error(f"Sync generation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Task status endpoint
 @app.get("/tasks/{task_id}")
@@ -139,19 +158,14 @@ async def get_task_status(task_id: str):
     else:
         return {"task_id": task_id, "status": task.state.lower()}
 
+
 # Synchronous chat endpoint
 @app.post("/chat-sync")
 async def chat_sync(request: ChatRequest):
     """Synchronous chat - blocks until complete"""
-    import asyncio
-    from gemini_service import GeminiService
-
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="AI service not configured")
-
     try:
-        async with GeminiService(api_key) as service:
+        provider = get_provider()
+        async with provider as service:
             result = await service.chat(
                 system_prompt=request.system_prompt,
                 user_message=request.user_message,
@@ -162,6 +176,8 @@ async def chat_sync(request: ChatRequest):
         logger.error(f"Chat failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8001)

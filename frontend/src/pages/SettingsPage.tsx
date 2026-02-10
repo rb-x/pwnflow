@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Settings, Share2, User, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AISettings } from "@/components/settings/AISettings";
 import { EventRoutingSettings } from "@/components/settings/EventRoutingSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 
@@ -15,7 +22,10 @@ export function SettingsPage() {
   useEffect(() => {
     // Update tab if URL changes
     const tab = searchParams.get("tab");
-    if (tab && ["profile", "security", "general", "event-routing"].includes(tab)) {
+    if (
+      tab &&
+      ["profile", "security", "general", "event-routing"].includes(tab)
+    ) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -38,7 +48,11 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="space-y-4"
+      >
         <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -52,7 +66,10 @@ export function SettingsPage() {
             <Settings className="h-4 w-4" />
             General
           </TabsTrigger>
-          <TabsTrigger value="event-routing" className="flex items-center gap-2">
+          <TabsTrigger
+            value="event-routing"
+            className="flex items-center gap-2"
+          >
             <Share2 className="h-4 w-4" />
             Event Routing
           </TabsTrigger>
@@ -83,19 +100,7 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="general" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>
-                Configure general application settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                General settings will be available here
-              </p>
-            </CardContent>
-          </Card>
+          <AISettings />
         </TabsContent>
       </Tabs>
     </div>
