@@ -27,10 +27,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 const CONFIG_EXAMPLES = [
   {
     name: "Google Gemini",
-    vars: [
-      "GOOGLE_API_KEY=your-api-key",
-      "GEMINI_MODEL=gemini-2.0-flash",
-    ],
+    vars: ["GOOGLE_API_KEY=your-api-key", "GEMINI_MODEL=gemini-2.0-flash"],
   },
   {
     name: "OpenAI",
@@ -42,24 +39,15 @@ const CONFIG_EXAMPLES = [
   },
   {
     name: "Ollama (local)",
-    vars: [
-      "AI_BASE_URL=http://localhost:11434/v1",
-      "AI_MODEL=llama3",
-    ],
+    vars: ["AI_BASE_URL=http://localhost:11434/v1", "AI_MODEL=llama3"],
   },
   {
     name: "LM Studio (local)",
-    vars: [
-      "AI_BASE_URL=http://localhost:1234/v1",
-      "AI_MODEL=your-model-name",
-    ],
+    vars: ["AI_BASE_URL=http://localhost:1234/v1", "AI_MODEL=your-model-name"],
   },
   {
     name: "vLLM (local)",
-    vars: [
-      "AI_BASE_URL=http://localhost:8000/v1",
-      "AI_MODEL=your-model-name",
-    ],
+    vars: ["AI_BASE_URL=http://localhost:8000/v1", "AI_MODEL=your-model-name"],
   },
 ];
 
@@ -72,7 +60,7 @@ export function AISettings() {
     setLoading(true);
     setError(false);
     try {
-      const res = await api.get<AIStatus>("/api/v1/ai/status");
+      const res = await api.get<AIStatus>("/ai/status");
       setStatus(res.data);
     } catch {
       setError(true);
@@ -88,7 +76,7 @@ export function AISettings() {
 
   const isConnected = status?.status === "healthy" && status.ai_configured;
   const providerLabel = status?.ai_provider
-    ? PROVIDER_LABELS[status.ai_provider] ?? status.ai_provider
+    ? (PROVIDER_LABELS[status.ai_provider] ?? status.ai_provider)
     : null;
 
   return (
@@ -112,7 +100,9 @@ export function AISettings() {
               onClick={fetchStatus}
               disabled={loading}
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
             </Button>
           </div>
         </CardHeader>
@@ -165,12 +155,16 @@ export function AISettings() {
                       </span>
                       <span>
                         Model:{" "}
-                        <span className="text-white/70">{status?.ai_model}</span>
+                        <span className="text-white/70">
+                          {status?.ai_model}
+                        </span>
                       </span>
                       {status?.ai_base_url && (
                         <span>
                           Endpoint:{" "}
-                          <span className="text-white/70">{status.ai_base_url}</span>
+                          <span className="text-white/70">
+                            {status.ai_base_url}
+                          </span>
                         </span>
                       )}
                     </div>
@@ -187,8 +181,11 @@ export function AISettings() {
         <CardHeader>
           <CardTitle className="text-white">Configuration Reference</CardTitle>
           <CardDescription>
-            Set these environment variables in your <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs">.env</code> file
-            and restart the services.
+            Set these environment variables in your{" "}
+            <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs">
+              .env
+            </code>{" "}
+            file and restart the services.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
