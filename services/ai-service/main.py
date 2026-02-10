@@ -156,7 +156,7 @@ async def get_task_status(task_id: str):
     elif task.state == "FAILURE":
         return {"task_id": task_id, "status": "failed", "error": str(task.info)}
     else:
-        return {"task_id": task_id, "status": task.state.lower()}
+        return {"task_id": task_id, "status": "processing"}
 
 
 # Synchronous chat endpoint
