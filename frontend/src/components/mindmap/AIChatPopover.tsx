@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Loader2,
   Sparkles,
@@ -11,14 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { authService } from "@/services/auth/authService";
 import { cn } from "@/lib/utils";
 import { useMindMapStore } from "@/store/mindMapStore";
@@ -609,295 +603,304 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
   return (
     <>
       {children}
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => onOpenChange(false)}
-          />
-          <div className="relative w-[700px] h-[80vh] max-h-[800px] p-0 flex flex-col bg-background/95 backdrop-blur-sm shadow-2xl rounded-xl border border-border">
-            <ScrollArea
-              ref={scrollAreaRef}
-              className="flex-1 overflow-y-auto overflow-x-hidden"
-            >
-              <div className="space-y-3 px-4 py-3 max-w-full">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex",
-                      message.type === "user" ? "justify-end" : "justify-start",
-                    )}
-                  >
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => onOpenChange(false)}
+            />
+            <div className="relative w-[700px] h-[80vh] max-h-[800px] p-0 flex flex-col bg-background/95 backdrop-blur-sm shadow-2xl rounded-xl border border-border">
+              <ScrollArea
+                ref={scrollAreaRef}
+                className="flex-1 overflow-y-auto overflow-x-hidden"
+              >
+                <div className="space-y-3 px-4 py-3 max-w-full">
+                  {messages.map((message) => (
                     <div
+                      key={message.id}
                       className={cn(
-                        "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                        message.type === "user" &&
-                          "bg-primary text-primary-foreground",
-                        message.type === "assistant" &&
-                          "bg-muted border border-border shadow-sm text-foreground",
-                        message.type === "system" &&
-                          "bg-muted text-muted-foreground text-xs border shadow-sm border-border",
+                        "flex",
+                        message.type === "user"
+                          ? "justify-end"
+                          : "justify-start",
                       )}
-                      style={{
-                        wordBreak: "break-word",
-                        overflowWrap: "break-word",
-                      }}
                     >
-                      {message.type === "assistant" && !message.content ? (
-                        <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse rounded-sm" />
-                      ) : message.type === "assistant" ? (
-                        <div className="prose prose-sm max-w-none [&>*]:break-words prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-li:text-foreground">
-                          <ReactMarkdown
-                            components={{
-                              code: ({ className, children, ...props }) => {
-                                const isInline = !className;
-                                return isInline ? (
-                                  <code
-                                    className="bg-muted px-1 py-0.5 rounded text-xs break-all"
-                                    {...props}
-                                  >
-                                    {children}
-                                  </code>
-                                ) : (
-                                  <pre className="bg-muted p-2 rounded overflow-x-auto max-w-full">
+                      <div
+                        className={cn(
+                          "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                          message.type === "user" &&
+                            "bg-primary text-primary-foreground",
+                          message.type === "assistant" &&
+                            "bg-muted border border-border shadow-sm text-foreground",
+                          message.type === "system" &&
+                            "bg-muted text-muted-foreground text-xs border shadow-sm border-border",
+                        )}
+                        style={{
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
+                        }}
+                      >
+                        {message.type === "assistant" && !message.content ? (
+                          <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse rounded-sm" />
+                        ) : message.type === "assistant" ? (
+                          <div className="prose prose-sm max-w-none [&>*]:break-words prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-code:text-foreground prose-li:text-foreground">
+                            <ReactMarkdown
+                              components={{
+                                code: ({ className, children, ...props }) => {
+                                  const isInline = !className;
+                                  return isInline ? (
                                     <code
-                                      className="text-xs block whitespace-pre-wrap"
+                                      className="bg-muted px-1 py-0.5 rounded text-xs break-all"
                                       {...props}
                                     >
                                       {children}
                                     </code>
-                                  </pre>
-                                );
-                              },
-                              h3: ({ children }) => (
-                                <h3 className="font-semibold text-sm mt-2 mb-1 break-words">
-                                  {children}
-                                </h3>
-                              ),
-                              ul: ({ children }) => (
-                                <ul className="list-disc space-y-1 pl-4 ml-2">
-                                  {children}
-                                </ul>
-                              ),
-                              ol: ({ children }) => (
-                                <ol className="list-decimal space-y-1 pl-4 ml-2">
-                                  {children}
-                                </ol>
-                              ),
-                              li: ({ children }) => (
-                                <li className="text-sm break-words">
-                                  {children}
-                                </li>
-                              ),
-                              p: ({ children }) => (
-                                <p className="mb-2 break-words">{children}</p>
-                              ),
-                            }}
-                          >
+                                  ) : (
+                                    <pre className="bg-muted p-2 rounded overflow-x-auto max-w-full">
+                                      <code
+                                        className="text-xs block whitespace-pre-wrap"
+                                        {...props}
+                                      >
+                                        {children}
+                                      </code>
+                                    </pre>
+                                  );
+                                },
+                                h3: ({ children }) => (
+                                  <h3 className="font-semibold text-sm mt-2 mb-1 break-words">
+                                    {children}
+                                  </h3>
+                                ),
+                                ul: ({ children }) => (
+                                  <ul className="list-disc space-y-1 pl-4 ml-2">
+                                    {children}
+                                  </ul>
+                                ),
+                                ol: ({ children }) => (
+                                  <ol className="list-decimal space-y-1 pl-4 ml-2">
+                                    {children}
+                                  </ol>
+                                ),
+                                li: ({ children }) => (
+                                  <li className="text-sm break-words">
+                                    {children}
+                                  </li>
+                                ),
+                                p: ({ children }) => (
+                                  <p className="mb-2 break-words">{children}</p>
+                                ),
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words">
                             {message.content}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap break-words">
-                          {message.content}
+                          </p>
+                        )}
+                        <p className="text-xs opacity-50 mt-1">
+                          {message.timestamp instanceof Date
+                            ? message.timestamp.toLocaleTimeString()
+                            : new Date(message.timestamp).toLocaleTimeString()}
                         </p>
-                      )}
-                      <p className="text-xs opacity-50 mt-1">
-                        {message.timestamp instanceof Date
-                          ? message.timestamp.toLocaleTimeString()
-                          : new Date(message.timestamp).toLocaleTimeString()}
-                      </p>
 
-                      {/* Show create nodes button if suggestions exist */}
-                      {message.suggestions &&
-                        message.suggestions.length > 0 && (
-                          <div className="mt-3 p-3 bg-muted/20 rounded-lg">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Sparkles className="h-4 w-4 text-muted-foreground" />
-                              <p className="text-sm font-medium text-foreground">
-                                {message.suggestions.length} node
-                                {message.suggestions.length > 1 ? "s" : ""}{" "}
-                                ready to create
-                              </p>
-                            </div>
-                            <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
-                              {message.suggestions.map((s, idx) => (
-                                <div
-                                  key={idx}
-                                  className="p-2 bg-background/50 rounded text-xs"
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <Plus className="h-3 w-3 mt-0.5 text-muted-foreground shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-medium break-words text-foreground">
-                                        {s.title}
-                                      </div>
-                                      {s.parent_title && (
-                                        <div className="text-muted-foreground text-xs mt-0.5">
-                                          Links to: {s.parent_title}
+                        {/* Show create nodes button if suggestions exist */}
+                        {message.suggestions &&
+                          message.suggestions.length > 0 && (
+                            <div className="mt-3 p-3 bg-muted/20 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Sparkles className="h-4 w-4 text-muted-foreground" />
+                                <p className="text-sm font-medium text-foreground">
+                                  {message.suggestions.length} node
+                                  {message.suggestions.length > 1
+                                    ? "s"
+                                    : ""}{" "}
+                                  ready to create
+                                </p>
+                              </div>
+                              <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+                                {message.suggestions.map((s, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="p-2 bg-background/50 rounded text-xs"
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <Plus className="h-3 w-3 mt-0.5 text-muted-foreground shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium break-words text-foreground">
+                                          {s.title}
                                         </div>
-                                      )}
-                                      {s.suggested_commands &&
-                                        s.suggested_commands.length > 0 && (
+                                        {s.parent_title && (
                                           <div className="text-muted-foreground text-xs mt-0.5">
-                                            {s.suggested_commands.length}{" "}
-                                            command
-                                            {s.suggested_commands.length > 1
-                                              ? "s"
-                                              : ""}
+                                            Links to: {s.parent_title}
                                           </div>
                                         )}
-                                      {s.suggested_tags &&
-                                        s.suggested_tags.length > 0 && (
-                                          <div className="flex gap-1 mt-1 flex-wrap">
-                                            {s.suggested_tags.map(
-                                              (tag, idx) => (
-                                                <span
-                                                  key={idx}
-                                                  className="text-xs px-1.5 py-0.5 bg-muted rounded-md text-muted-foreground"
-                                                >
-                                                  {tag}
-                                                </span>
-                                              ),
-                                            )}
-                                          </div>
-                                        )}
+                                        {s.suggested_commands &&
+                                          s.suggested_commands.length > 0 && (
+                                            <div className="text-muted-foreground text-xs mt-0.5">
+                                              {s.suggested_commands.length}{" "}
+                                              command
+                                              {s.suggested_commands.length > 1
+                                                ? "s"
+                                                : ""}
+                                            </div>
+                                          )}
+                                        {s.suggested_tags &&
+                                          s.suggested_tags.length > 0 && (
+                                            <div className="flex gap-1 mt-1 flex-wrap">
+                                              {s.suggested_tags.map(
+                                                (tag, idx) => (
+                                                  <span
+                                                    key={idx}
+                                                    className="text-xs px-1.5 py-0.5 bg-muted rounded-md text-muted-foreground"
+                                                  >
+                                                    {tag}
+                                                  </span>
+                                                ),
+                                              )}
+                                            </div>
+                                          )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  createNodesFromSuggestions(
+                                    message.suggestions!,
+                                  )
+                                }
+                                disabled={isCreating}
+                                className="w-full h-8"
+                              >
+                                {isCreating ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Creating {message.suggestions.length}{" "}
+                                    nodes...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Create All Nodes
+                                  </>
+                                )}
+                              </Button>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                createNodesFromSuggestions(message.suggestions!)
-                              }
-                              disabled={isCreating}
-                              className="w-full h-8"
-                            >
-                              {isCreating ? (
-                                <>
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                  Creating {message.suggestions.length} nodes...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Create All Nodes
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                    </div>
-                  </div>
-                ))}
-
-                {isLoading &&
-                  messages[messages.length - 1]?.type === "assistant" &&
-                  !messages[messages.length - 1]?.content && (
-                    <div className="flex justify-start px-4">
-                      <div className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border shadow-md w-fit">
-                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          Thinking...
-                        </span>
+                          )}
                       </div>
                     </div>
-                  )}
+                  ))}
 
-                {error && (
-                  <Alert variant="destructive" className="text-xs">
-                    <AlertCircle className="h-3 w-3" />
-                    <AlertDescription className="text-xs">
-                      {error}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            </ScrollArea>
-
-            <div className="p-4">
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2 mb-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => clearChat()}
-                  disabled={isLoading}
-                  className="h-7 px-2 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  /clear
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => exportChat()}
-                  disabled={isLoading}
-                  className="h-7 px-3 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  /export
-                </Button>
-                <div className="flex-1" />
-              </div>
-
-              <div className="relative pb-3">
-                <div className="relative">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value);
-                      // Auto-grow textarea
-                      e.target.style.height = "auto";
-                      e.target.style.height =
-                        Math.min(e.target.scrollHeight, 120) + "px";
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      }
-                    }}
-                    placeholder={
-                      isLoading
-                        ? "Generating response..."
-                        : "Ask anything... (Shift+Enter for newline)"
-                    }
-                    disabled={isLoading}
-                    rows={1}
-                    className={cn(
-                      "w-full min-h-[48px] max-h-[120px] pr-12 pl-4 py-3 text-sm rounded-2xl shadow-xl bg-background/80 backdrop-blur-sm focus:bg-background transition-all duration-300 border resize-none focus:outline-none focus:ring-2 focus:ring-ring",
-                      isLoading && "animate-pulse bg-background/40",
+                  {isLoading &&
+                    messages[messages.length - 1]?.type === "assistant" &&
+                    !messages[messages.length - 1]?.content && (
+                      <div className="flex justify-start px-4">
+                        <div className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm bg-muted/80 border border-border shadow-md w-fit">
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            Thinking...
+                          </span>
+                        </div>
+                      </div>
                     )}
-                  />
-                  {isStreaming ? (
-                    <Button
-                      type="button"
-                      onClick={handleAbort}
-                      className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      <Square className="h-2.5 w-2.5" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={handleSend}
-                      disabled={!input.trim() || isLoading}
-                      className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-primary text-primary-foreground hover:bg-primary"
-                    >
-                      <ArrowUp className="h-2 w-2" />
-                    </Button>
+
+                  {error && (
+                    <Alert variant="destructive" className="text-xs">
+                      <AlertCircle className="h-3 w-3" />
+                      <AlertDescription className="text-xs">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
                   )}
+                </div>
+              </ScrollArea>
+
+              <div className="p-4">
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2 mb-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => clearChat()}
+                    disabled={isLoading}
+                    className="h-7 px-2 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    /clear
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => exportChat()}
+                    disabled={isLoading}
+                    className="h-7 px-3 text-xs text-muted-foreground bg-accent/50 hover:text-foreground"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    /export
+                  </Button>
+                  <div className="flex-1" />
+                </div>
+
+                <div className="relative pb-3">
+                  <div className="relative">
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => {
+                        setInput(e.target.value);
+                        // Auto-grow textarea
+                        e.target.style.height = "auto";
+                        e.target.style.height =
+                          Math.min(e.target.scrollHeight, 120) + "px";
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
+                        }
+                      }}
+                      placeholder={
+                        isLoading
+                          ? "Generating response..."
+                          : "Ask anything... (Shift+Enter for newline)"
+                      }
+                      disabled={isLoading}
+                      rows={1}
+                      className={cn(
+                        "w-full min-h-[48px] max-h-[120px] pr-12 pl-4 py-3 text-sm rounded-2xl shadow-xl bg-background/80 backdrop-blur-sm focus:bg-background transition-all duration-300 border resize-none focus:outline-none focus:ring-2 focus:ring-ring",
+                        isLoading && "animate-pulse bg-background/40",
+                      )}
+                    />
+                    {isStreaming ? (
+                      <Button
+                        type="button"
+                        onClick={handleAbort}
+                        className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        <Square className="h-2.5 w-2.5" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={handleSend}
+                        disabled={!input.trim() || isLoading}
+                        className="absolute right-3 bottom-3 h-6 w-6 p-0 rounded-full bg-primary text-primary-foreground hover:bg-primary"
+                      >
+                        <ArrowUp className="h-2 w-2" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 };
