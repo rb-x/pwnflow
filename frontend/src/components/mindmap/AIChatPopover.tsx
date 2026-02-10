@@ -904,7 +904,7 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                     <Button
                       type="button"
                       onClick={handleAbort}
-                      className="absolute right-2.5 bottom-2.5 h-7 w-7 p-0 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       <Square className="h-3 w-3" />
                     </Button>
@@ -913,9 +913,9 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
                       type="button"
                       onClick={handleSend}
                       disabled={!input.trim() || isLoading}
-                      className="absolute right-2.5 bottom-2.5 h-7 w-7 p-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
                     >
-                      <ArrowUp className="h-3.5 w-3.5" />
+                      <ArrowUp className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
