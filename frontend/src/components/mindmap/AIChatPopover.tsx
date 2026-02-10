@@ -564,6 +564,20 @@ export const AIChatPopover: React.FC<AIChatPopoverProps> = ({
         ),
       );
 
+      // Scroll to bottom after suggestions render
+      if (suggestions) {
+        setTimeout(() => {
+          if (scrollAreaRef.current) {
+            const viewport = scrollAreaRef.current.querySelector(
+              "[data-radix-scroll-area-viewport]",
+            );
+            if (viewport) {
+              viewport.scrollTop = viewport.scrollHeight;
+            }
+          }
+        }, 100);
+      }
+
       setIsLoading(false);
       setIsStreaming(false);
       abortControllerRef.current = null;

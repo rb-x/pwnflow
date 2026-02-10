@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 import json
@@ -402,6 +402,39 @@ NODE_CREATION_TRIGGERS = [
 ]
 
 
+def _extract_nodes(result: Any) -> list:
+    """Extract node list from various LLM response shapes."""
+    if isinstance(result, str):
+        try:
+            result = json.loads(result)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    if isinstance(result, list):
+        # Raw array of nodes
+        return [n for n in result if isinstance(n, dict) and "title" in n]
+
+    if isinstance(result, dict):
+        # Shape: {"directives": {"action": "suggest_nodes", "nodes": [...]}}
+        directives = result.get("directives")
+        if isinstance(directives, dict):
+            nodes = directives.get("nodes", [])
+            if isinstance(nodes, list) and nodes:
+                return nodes
+
+        # Shape: {"nodes": [...]}
+        nodes = result.get("nodes", [])
+        if isinstance(nodes, list) and nodes:
+            return nodes
+
+        # Shape: {"suggestions": [...]}
+        nodes = result.get("suggestions", [])
+        if isinstance(nodes, list) and nodes:
+            return nodes
+
+    return []
+
+
 def _should_generate_suggestions(message: str) -> bool:
     msg_lower = message.lower()
     return any(trigger in msg_lower for trigger in NODE_CREATION_TRIGGERS)
@@ -596,22 +629,12 @@ Return ONLY valid JSON. No markdown, no extra text."""
                     user_message=suggestion_prompt,
                 )
 
-                if isinstance(result, dict):
-                    directives = result.get("directives")
-                    if isinstance(directives, dict) and directives.get("action") == "suggest_nodes":
-                        nodes = directives.get("nodes", [])
-                        if nodes:
-                            yield f"event: suggestions\ndata: {json.dumps({'nodes': nodes})}\n\n"
-                elif isinstance(result, str):
-                    try:
-                        parsed = json.loads(result)
-                        directives = parsed.get("directives")
-                        if isinstance(directives, dict) and directives.get("action") == "suggest_nodes":
-                            nodes = directives.get("nodes", [])
-                            if nodes:
-                                yield f"event: suggestions\ndata: {json.dumps({'nodes': nodes})}\n\n"
-                    except json.JSONDecodeError:
-                        pass
+                nodes = _extract_nodes(result)
+                if nodes:
+                    logger.info(f"Emitting {len(nodes)} node suggestions")
+                    yield f"event: suggestions\ndata: {json.dumps({'nodes': nodes})}\n\n"
+                else:
+                    logger.warning(f"No nodes extracted from suggestion result: {str(result)[:300]}")
 
             except Exception as e:
                 logger.error(f"Suggestion generation failed: {e}")
